@@ -1,4 +1,4 @@
-# Complete pandas Manual: Practical Data Analysis, Statistics, and Plotting
+# Complete pandas Manual: Practical Data Analysis, SQL, Statistics, and Plotting
 
 ---
 
@@ -52,11 +52,12 @@
 35. [MultiIndex and Hierarchical Data](#35-multiindex-and-hierarchical-data)
 36. [Cumulative, Rolling, and Window Calculations](#36-cumulative-rolling-and-window-calculations)
 37. [Binning, Bucketing, and Segmentation](#37-binning-bucketing-and-segmentation)
-38. [Working with Many Files, JSON, and SQL](#38-working-with-many-files-json-and-sql)
-39. [Styling Tables and Creating Review Outputs](#39-styling-tables-and-creating-review-outputs)
-40. [Common Errors and How to Fix Them](#40-common-errors-and-how-to-fix-them)
-41. [Mini Cheat Sheet](#41-mini-cheat-sheet)
-42. [References](#42-references)
+38. [Working with Many Files and JSON](#38-working-with-many-files-and-json)
+39. [SQL for pandas and Python Data Work](#39-sql-for-pandas-and-python-data-work)
+40. [Styling Tables and Creating Review Outputs](#40-styling-tables-and-creating-review-outputs)
+41. [Common Errors and How to Fix Them](#41-common-errors-and-how-to-fix-them)
+42. [Mini Cheat Sheet](#42-mini-cheat-sheet)
+43. [References](#43-references)
 
 ---
 
@@ -80,7 +81,7 @@ Each important pandas topic includes:
 
 You can read it from top to bottom, or you can jump directly to the section you need.
 
-The manual is split into four major parts so pandas skills, statistics concepts, charts/plots, and applied reference material are easy to find separately.
+The manual is split into major parts so pandas skills, statistics concepts, charts/plots, SQL workflows, and applied reference material are easy to find separately.
 
 The examples use small datasets so the logic is easy to understand. In real work, the same code patterns apply to large Excel files, CSV reports, order reports, audit logs, productivity reports, and automation outputs.
 
@@ -5927,9 +5928,9 @@ Examples:
 
 ---
 
-# 38. Working with Many Files, JSON, and SQL
+# 38. Working with Many Files and JSON
 
-pandas is often used to combine many reports.
+pandas is often used to combine many reports before analysis. Keep this workflow separate from database work: file ingestion is usually about finding files, standardizing columns, and keeping an audit trail; SQL work is usually about requesting the right rows from a database before pandas receives them.
 
 ## 38.1 Read all CSV files in a folder
 
@@ -5975,13 +5976,48 @@ Excel often creates temporary files that start with `~$`.
 files = [file for file in folder.glob("*.xlsx") if not file.name.startswith("~$")]
 ```
 
-## 38.4 Read JSON
+## 38.4 Standardize columns while combining files
+
+Reports from different months or teams often use slightly different column names. Standardize them before concatenating.
+
+```python
+rename_map = {
+    "Order #": "Order_ID",
+    "Order Number": "Order_ID",
+    "Customer Name": "Customer",
+    "Order Amount": "Amount",
+}
+
+frames = []
+for file in folder.glob("*.csv"):
+    temp = pd.read_csv(file)
+    temp = temp.rename(columns=rename_map)
+    temp.columns = temp.columns.str.strip().str.replace(" ", "_", regex=False)
+    temp["Source_File"] = file.name
+    frames.append(temp)
+
+combined = pd.concat(frames, ignore_index=True)
+```
+
+## 38.5 Validate required columns after combining files
+
+```python
+required = {"Order_ID", "Customer", "Amount", "Source_File"}
+missing = required - set(combined.columns)
+
+if missing:
+    raise ValueError(f"Missing required columns: {sorted(missing)}")
+```
+
+This catches report layout changes before they silently damage the analysis.
+
+## 38.6 Read JSON
 
 ```python
 df = pd.read_json("data.json")
 ```
 
-## 38.5 Normalize nested JSON
+## 38.7 Normalize nested JSON
 
 ```python
 data = [
@@ -6005,30 +6041,6 @@ lines = pd.json_normalize(
 )
 ```
 
-## 38.6 Read SQL query
-
-```python
-import sqlite3
-
-conn = sqlite3.connect("database.db")
-
-df = pd.read_sql_query("SELECT * FROM orders", conn)
-```
-
-## 38.7 Write to SQL
-
-```python
-df.to_sql("orders_clean", conn, if_exists="replace", index=False)
-```
-
-Common `if_exists` options:
-
-| Option | Meaning |
-|---|---|
-| `fail` | Error if table exists |
-| `replace` | Drop and recreate table |
-| `append` | Add rows to existing table |
-
 ## 38.8 Create an error report while processing files
 
 ```python
@@ -6051,11 +6063,340 @@ This is useful in automation because one bad file should not always stop the who
 
 ---
 
-# 39. Styling Tables and Creating Review Outputs
+# 39. SQL for pandas and Python Data Work
+
+SQL is one of the most important companion skills for pandas. pandas is excellent after the data is in memory, but SQL is often the best way to bring only the right data from a database: the right columns, the right rows, the right date range, and the right joins.
+
+A strong workflow is:
+
+1. Use SQL to reduce and shape the data close to the database.
+2. Use pandas to inspect, clean, validate, analyze, visualize, and export the result.
+3. Push cleaned or summarized results back to a database only when that is part of the workflow.
+
+## 39.1 When to use SQL before pandas
+
+Use SQL before pandas when:
+
+- The source data is in a database.
+- The table is too large to load fully into memory.
+- You need only selected columns or recent dates.
+- Joins can be performed reliably in the database.
+- Aggregating in the database will greatly reduce row count.
+- You want database permissions, indexes, and query planning to do their job.
+
+Use pandas after SQL when:
+
+- You need flexible cleaning, business rules, or custom calculations.
+- You need Excel, CSV, charts, or review workbooks.
+- You need exploratory analysis with quick iterations.
+- You need final validation and exception reporting.
+
+## 39.2 Basic connection patterns
+
+For a local SQLite database, Python's standard library is enough.
+
+```python
+import sqlite3
+import pandas as pd
+
+conn = sqlite3.connect("orders.db")
+
+orders = pd.read_sql_query(
+    "SELECT order_id, customer, order_date, amount FROM orders",
+    conn
+)
+```
+
+For many production databases, use SQLAlchemy or a database-specific driver. The exact connection string depends on the database and company environment.
+
+```python
+from sqlalchemy import create_engine
+import pandas as pd
+
+engine = create_engine("postgresql+psycopg://user:password@host:5432/database")
+
+orders = pd.read_sql_query(
+    "SELECT order_id, customer, order_date, amount FROM orders",
+    engine
+)
+```
+
+In real projects, do not hard-code passwords in notebooks or scripts. Use environment variables, a secrets manager, or your organization's approved credential tool.
+
+## 39.3 Read SQL with selected columns
+
+Avoid `SELECT *` for routine work. Bring columns intentionally.
+
+```python
+query = """
+SELECT
+    order_id,
+    customer_id,
+    order_date,
+    status,
+    amount
+FROM orders
+"""
+
+orders = pd.read_sql_query(query, conn)
+```
+
+Benefits:
+
+- Less memory usage in pandas.
+- Faster transfer from database to Python.
+- Fewer confusing duplicate or unused columns.
+- More stable code when the table gains extra columns.
+
+## 39.4 Filter rows in SQL before loading
+
+```python
+query = """
+SELECT
+    order_id,
+    customer_id,
+    order_date,
+    status,
+    amount
+FROM orders
+WHERE order_date >= '2026-01-01'
+  AND status IN ('Open', 'Shipped')
+"""
+
+orders = pd.read_sql_query(query, conn, parse_dates=["order_date"])
+```
+
+Filtering in SQL is usually better than loading millions of rows and filtering in pandas afterward.
+
+## 39.5 Use parameters instead of string formatting
+
+Do not build SQL by directly inserting user input into a string. Use parameters so values are passed safely.
+
+```python
+query = """
+SELECT
+    order_id,
+    customer_id,
+    order_date,
+    amount
+FROM orders
+WHERE order_date BETWEEN ? AND ?
+  AND customer_id = ?
+"""
+
+orders = pd.read_sql_query(
+    query,
+    conn,
+    params=["2026-01-01", "2026-03-31", "C001"],
+    parse_dates=["order_date"]
+)
+```
+
+Different database drivers may use different parameter styles, such as `?`, `%s`, or named parameters. Follow the driver documentation for your database.
+
+## 39.6 Join database tables before pandas
+
+If the database already has clean keys and indexes, join there first.
+
+```python
+query = """
+SELECT
+    o.order_id,
+    o.order_date,
+    c.customer_name,
+    c.region,
+    o.amount
+FROM orders AS o
+LEFT JOIN customers AS c
+    ON o.customer_id = c.customer_id
+WHERE o.order_date >= '2026-01-01'
+"""
+
+orders = pd.read_sql_query(query, conn, parse_dates=["order_date"])
+```
+
+This is similar to `pd.merge`, but the database may be faster and avoids bringing unnecessary lookup tables into Python.
+
+## 39.7 Aggregate in SQL to reduce data volume
+
+If you need a monthly summary, let the database return the monthly summary instead of every transaction.
+
+```python
+query = """
+SELECT
+    customer_id,
+    strftime('%Y-%m', order_date) AS order_month,
+    COUNT(*) AS order_count,
+    SUM(amount) AS total_amount,
+    AVG(amount) AS average_amount
+FROM orders
+WHERE order_date >= '2026-01-01'
+GROUP BY customer_id, strftime('%Y-%m', order_date)
+"""
+
+monthly = pd.read_sql_query(query, conn)
+```
+
+Date functions differ by database. For example, SQLite uses `strftime`, PostgreSQL uses functions such as `date_trunc`, and SQL Server uses functions such as `DATEFROMPARTS` or `FORMAT` depending on the need.
+
+## 39.8 Preview tables and understand schema
+
+Before writing a large query, inspect the available fields.
+
+```python
+# SQLite example: list tables
+pd.read_sql_query(
+    "SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name",
+    conn
+)
+
+# Preview a table
+pd.read_sql_query("SELECT * FROM orders LIMIT 5", conn)
+```
+
+For production systems, prefer your database catalog, data dictionary, or approved metadata views.
+
+## 39.9 Read large SQL results in chunks
+
+Use chunks when the result may be too large for memory.
+
+```python
+query = """
+SELECT order_id, customer_id, order_date, amount
+FROM orders
+WHERE order_date >= '2026-01-01'
+"""
+
+chunks = pd.read_sql_query(query, conn, chunksize=100_000, parse_dates=["order_date"])
+
+summary_parts = []
+for chunk in chunks:
+    part = chunk.groupby("customer_id", as_index=False)["amount"].sum()
+    summary_parts.append(part)
+
+summary = (
+    pd.concat(summary_parts, ignore_index=True)
+      .groupby("customer_id", as_index=False)["amount"].sum()
+)
+```
+
+Chunking is especially useful when you can process each chunk independently and combine small summaries at the end.
+
+## 39.10 Control data types after reading SQL
+
+Database types do not always arrive in pandas exactly how you expect. Check and convert after loading.
+
+```python
+orders = pd.read_sql_query(query, conn, parse_dates=["order_date"])
+
+orders["customer_id"] = orders["customer_id"].astype("string")
+orders["status"] = orders["status"].astype("category")
+orders["amount"] = pd.to_numeric(orders["amount"], errors="coerce")
+```
+
+Common conversions:
+
+| Database value | pandas action |
+|---|---|
+| Date or timestamp text | `parse_dates=["date_column"]` or `pd.to_datetime()` |
+| Repeated labels | `.astype("category")` |
+| Codes with leading zeroes | `.astype("string")` |
+| Numeric text | `pd.to_numeric(..., errors="coerce")` |
+
+## 39.11 Write a DataFrame to SQL
+
+```python
+clean_orders.to_sql(
+    "orders_clean",
+    conn,
+    if_exists="replace",
+    index=False
+)
+```
+
+Common `if_exists` options:
+
+| Option | Meaning |
+|---|---|
+| `fail` | Error if table exists |
+| `replace` | Drop and recreate table |
+| `append` | Add rows to an existing table |
+
+Be careful with `replace` in shared databases because it can drop an existing table. In production, write to a staging table first unless you are certain replacement is safe.
+
+## 39.12 Append results safely
+
+When appending, make sure columns, data types, and grain match the destination table.
+
+```python
+required_columns = ["order_id", "customer_id", "order_date", "amount"]
+output = clean_orders[required_columns].copy()
+
+output.to_sql(
+    "orders_clean",
+    conn,
+    if_exists="append",
+    index=False,
+    method="multi",
+    chunksize=10_000
+)
+```
+
+Good append checks:
+
+- Confirm the destination table is the correct table.
+- Confirm row count before and after writing.
+- Confirm key columns are not missing.
+- Confirm date and numeric types are correct.
+- Avoid appending the same extract twice.
+
+## 39.13 Use transactions for write workflows
+
+A transaction helps keep database writes all-or-nothing when the connection and database support it.
+
+```python
+with conn:
+    clean_orders.to_sql("orders_stage", conn, if_exists="replace", index=False)
+    conn.execute("DELETE FROM load_log WHERE load_name = ?", ["orders_stage"])
+    conn.execute(
+        "INSERT INTO load_log (load_name, row_count) VALUES (?, ?)",
+        ["orders_stage", len(clean_orders)]
+    )
+```
+
+If an error occurs inside the `with conn:` block for SQLite, the transaction is rolled back.
+
+## 39.14 SQL query checklist before loading to pandas
+
+Before running a query that brings data into pandas, ask:
+
+- What is one row supposed to represent?
+- Which columns do I actually need?
+- What date range or business filter should limit the data?
+- Are joins one-to-one, many-to-one, or many-to-many?
+- Could the query create duplicate business keys?
+- Can I aggregate in SQL before loading?
+- Do I need parameters for dates, IDs, or user-provided values?
+- Will the result fit comfortably in memory?
+
+## 39.15 SQL-to-pandas troubleshooting
+
+| Problem | Likely cause | Fix |
+|---|---|---|
+| Query is slow | Missing filters, too many columns, expensive join | Add `WHERE`, select fewer columns, ask a database expert about indexes |
+| pandas runs out of memory | Result set too large | Aggregate in SQL or use `chunksize` |
+| Date column is text | Driver did not convert dates | Use `parse_dates` or `pd.to_datetime` |
+| IDs lose leading zeroes | ID was interpreted as numeric | Convert to string and preserve codes as text |
+| Row count is larger than expected | Join duplicated rows | Check key uniqueness before and after the join |
+| SQL injection risk | Values inserted with f-strings or concatenation | Use query parameters |
+
+---
+
+# 40. Styling Tables and Creating Review Outputs
 
 pandas can style DataFrames for display and Excel output.
 
-## 39.1 Format numbers for display
+## 40.1 Format numbers for display
 
 ```python
 styled = df.style.format({
@@ -6068,19 +6409,19 @@ styled = df.style.format({
 
 This changes display formatting, not the underlying values.
 
-## 39.2 Highlight maximum values
+## 40.2 Highlight maximum values
 
 ```python
 styled = df.style.highlight_max(subset=["Variance"])
 ```
 
-## 39.3 Highlight minimum values
+## 40.3 Highlight minimum values
 
 ```python
 styled = df.style.highlight_min(subset=["Variance"])
 ```
 
-## 39.4 Conditional formatting with a custom function
+## 40.4 Conditional formatting with a custom function
 
 ```python
 def highlight_savings(value):
@@ -6093,13 +6434,13 @@ styled = df.style.applymap(highlight_savings, subset=["Variance"])
 
 Note: styling syntax can change across pandas versions. If `applymap` is deprecated in your version, use the current Styler elementwise method recommended by the installed pandas version.
 
-## 39.5 Export styled DataFrame to Excel
+## 40.5 Export styled DataFrame to Excel
 
 ```python
 styled.to_excel("styled_report.xlsx", engine="openpyxl", index=False)
 ```
 
-## 39.6 Create a review workbook
+## 40.6 Create a review workbook
 
 ```python
 with pd.ExcelWriter("review_package.xlsx", engine="openpyxl") as writer:
@@ -6108,7 +6449,7 @@ with pd.ExcelWriter("review_package.xlsx", engine="openpyxl") as writer:
     df[df["Variance"] <= 0].to_excel(writer, sheet_name="No Savings", index=False)
 ```
 
-## 39.7 Add an audit summary sheet
+## 40.7 Add an audit summary sheet
 
 ```python
 summary = pd.DataFrame({
@@ -6128,9 +6469,9 @@ with pd.ExcelWriter("review_package.xlsx", engine="openpyxl") as writer:
 
 ---
 
-# 40. Common Errors and How to Fix Them
+# 41. Common Errors and How to Fix Them
 
-## 34.1 KeyError: column not found
+## 41.1 KeyError: column not found
 
 Error:
 
@@ -6157,7 +6498,7 @@ Clean columns:
 df.columns = df.columns.str.strip()
 ```
 
-## 34.2 TypeError when doing math
+## 41.2 TypeError when doing math
 
 Example problem:
 
@@ -6174,7 +6515,7 @@ df["Budgeted"] = pd.to_numeric(df["Budgeted"], errors="coerce")
 df["Actual"] = pd.to_numeric(df["Actual"], errors="coerce")
 ```
 
-## 34.3 SettingWithCopyWarning
+## 41.3 SettingWithCopyWarning
 
 Problem pattern:
 
@@ -6196,7 +6537,7 @@ Or update original DataFrame:
 df.loc[df["Variance"] > 0, "Status"] = "Under Budget"
 ```
 
-## 34.4 Dates not working
+## 41.4 Dates not working
 
 Fix:
 
@@ -6210,7 +6551,7 @@ Then check invalid dates:
 bad_dates = df[df["Order_Date"].isna()]
 ```
 
-## 34.5 Merge creates too many rows
+## 41.5 Merge creates too many rows
 
 Cause:
 
@@ -6228,7 +6569,7 @@ Use validation:
 merged = left.merge(right, on="Key", how="left", validate="many_to_one")
 ```
 
-## 34.6 Missing values after merge
+## 41.6 Missing values after merge
 
 Use indicator:
 
@@ -6238,7 +6579,7 @@ merged = left.merge(right, on="Key", how="left", indicator=True)
 unmatched = merged[merged["_merge"] == "left_only"]
 ```
 
-## 34.7 Wrong totals after filtering
+## 41.7 Wrong totals after filtering
 
 Check whether your filter is correct:
 
@@ -6252,7 +6593,7 @@ Always verify row counts before and after major transformations.
 
 ---
 
-# 41. Mini Cheat Sheet
+# 42. Mini Cheat Sheet
 
 This quick reference collects the most common pandas patterns from the manual. It is intentionally compact, but it is broad enough to use as a day-to-day checklist when starting an analysis, cleaning a report, building a summary, or exporting review files.
 
@@ -6590,6 +6931,29 @@ plt.tight_layout()
 plt.show()
 ```
 
+## SQL with pandas
+
+```python
+# Read selected rows and columns from SQL
+query = """
+SELECT order_id, customer_id, order_date, amount
+FROM orders
+WHERE order_date BETWEEN ? AND ?
+"""
+orders = pd.read_sql_query(
+    query,
+    conn,
+    params=["2026-01-01", "2026-03-31"],
+    parse_dates=["order_date"]
+)
+
+# Read large results in chunks
+chunks = pd.read_sql_query(query, conn, params=["2026-01-01", "2026-03-31"], chunksize=100_000)
+
+# Write cleaned results to a staging table
+clean_orders.to_sql("orders_stage", conn, if_exists="replace", index=False)
+```
+
 ## Display formatting
 
 ```python
@@ -6616,7 +6980,7 @@ summary = df.groupby("Customer")["Amount"].sum().reset_index()
 
 ---
 
-# 42. References
+# 43. References
 
 Official references:
 
@@ -6629,6 +6993,9 @@ Official references:
 - pandas DataFrame API reference: https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html
 - pandas DataFrame.describe API reference: https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.describe.html
 - pandas GroupBy API reference: https://pandas.pydata.org/docs/reference/groupby.html
+- pandas SQL IO reference: https://pandas.pydata.org/docs/reference/io.html#sql
+- Python sqlite3 documentation: https://docs.python.org/3/library/sqlite3.html
+- SQLAlchemy documentation: https://docs.sqlalchemy.org/
 - Matplotlib examples: https://matplotlib.org/stable/gallery/index.html
 - Matplotlib histogram reference: https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.hist.html
 - Matplotlib bar reference: https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.bar.html
