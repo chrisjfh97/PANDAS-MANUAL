@@ -89,6 +89,18 @@ The manual is split into four major parts so pandas skills, statistics concepts,
 
 The examples use small datasets so the logic is easy to understand. In real work, the same code patterns apply to large Excel files, CSV reports, order reports, audit logs, productivity reports, and automation outputs.
 
+## 1.1 What was expanded in the pandas section
+
+The pandas fundamentals now include more advanced, realistic examples for the areas that usually matter most in day-to-day data manipulation:
+
+- **Reusable masks and complex filters** for combining business rules without creating unreadable one-line expressions.
+- **Custom column creation** that separates raw calculations, Boolean flags, formatted values, and final action labels.
+- **Grouping and aggregation** that produces operational summaries with counts, unique counts, totals, averages, rates, percentages, and sorted risk indicators.
+- **Joining multiple tables** with merge validation, missing-reference flags, and join audit checks.
+- **Index-based joins** for cases where `join` is more appropriate than `merge`.
+
+Basic examples are still included first because they teach the syntax. Complex examples are added after the basics so you can see the full capacity of each tool in a more realistic workflow.
+
 ---
 
 # 2. What pandas Is and Why It Matters
@@ -1003,6 +1015,57 @@ For column names with spaces:
 result = df.query("`Actual Amount` < `Budgeted Amount`")
 ```
 
+## 10.9 Complex filter pattern: reusable masks
+
+A **mask** is a Boolean Series that says which rows should be kept, updated, or reviewed. Complex filters are easier to understand when each business rule gets its own named mask.
+
+```python
+orders = pd.DataFrame({
+    "Order": ["C001", "C002", "C003", "C004", "C005", "C006"],
+    "Customer": ["North", "North", "South", "South", "West", "West"],
+    "Reviewer": ["Ana", "Luis", "Ana", "Maria", "Luis", "Ana"],
+    "Budgeted": [1000, 500, 800, 1200, 700, 900],
+    "Actual": [950, 650, 760, 1500, 690, 1020],
+    "Status": ["Closed", "Closed", "Open", "Closed", "Open", "Closed"],
+    "Order_Date": pd.to_datetime([
+        "2026-01-05", "2026-01-18", "2026-02-02",
+        "2026-02-20", "2026-03-03", "2026-03-14"
+    ])
+})
+
+orders["Variance"] = orders["Budgeted"] - orders["Actual"]
+orders["Variance_Pct"] = orders["Variance"] / orders["Budgeted"]
+
+closed_orders = orders["Status"].eq("Closed")
+large_overage = orders["Variance"] < -100
+first_quarter = orders["Order_Date"].between("2026-01-01", "2026-03-31")
+priority_customers = orders["Customer"].isin(["North", "South"])
+
+review_queue = orders[
+    closed_orders
+    & large_overage
+    & first_quarter
+    & priority_customers
+].copy()
+
+print(review_queue[["Order", "Customer", "Reviewer", "Variance", "Variance_Pct"]])
+```
+
+Output:
+
+```text
+  Order Customer Reviewer  Variance  Variance_Pct
+1  C002    North     Luis      -150         -0.300
+3  C004    South    Maria      -300         -0.250
+```
+
+Why this pattern is powerful:
+
+- Each mask has a business meaning.
+- You can reuse masks for filtering, updating, charting, or exports.
+- The final filter reads like a checklist instead of one long unreadable expression.
+- `.copy()` makes it clear that `review_queue` is a separate table you can safely modify.
+
 ---
 
 # 11. Creating, Updating, and Removing Columns
@@ -1101,6 +1164,63 @@ df = df.rename(columns={
 ```python
 df = df[["Order", "Budgeted", "Actual", "Variance", "Budget_Status"]]
 ```
+
+## 11.9 Complex custom column creation
+
+Real analysis often creates several columns in sequence: raw calculations, percentages, categories, flags, and final action labels. The order matters because later columns can depend on earlier columns.
+
+```python
+orders = pd.DataFrame({
+    "Order": ["C001", "C002", "C003", "C004", "C005"],
+    "Customer": ["North", "North", "South", "South", "West"],
+    "Budgeted": [1000, 500, 800, 1200, 700],
+    "Actual": [950, 650, 760, 1500, 690],
+    "Days_Open": [4, 12, 30, 18, 7],
+    "Priority": ["Normal", "High", "Normal", "High", "Normal"]
+})
+
+orders = orders.assign(
+    Variance=lambda d: d["Budgeted"] - d["Actual"],
+    Variance_Pct=lambda d: d["Variance"] / d["Budgeted"],
+    Is_Over_Budget=lambda d: d["Variance"] < 0,
+    Is_Late=lambda d: d["Days_Open"] > 14,
+)
+
+conditions = [
+    orders["Is_Over_Budget"] & orders["Is_Late"] & orders["Priority"].eq("High"),
+    orders["Is_Over_Budget"] & orders["Priority"].eq("High"),
+    orders["Is_Over_Budget"],
+    orders["Variance_Pct"] >= 0.10,
+]
+
+choices = [
+    "Escalate immediately",
+    "Manager review",
+    "Budget review",
+    "Savings opportunity",
+]
+
+orders["Action"] = np.select(conditions, choices, default="No action")
+orders["Variance_Dollars"] = orders["Variance"].map("${:,.0f}".format)
+
+print(orders[[
+    "Order", "Customer", "Variance_Dollars", "Variance_Pct",
+    "Is_Over_Budget", "Is_Late", "Action"
+]])
+```
+
+Output:
+
+```text
+  Order Customer Variance_Dollars  Variance_Pct  Is_Over_Budget  Is_Late                Action
+0  C001    North              $50      0.050000           False    False             No action
+1  C002    North            $-150     -0.300000            True    False        Manager review
+2  C003    South              $40      0.050000           False     True             No action
+3  C004    South            $-300     -0.250000            True     True  Escalate immediately
+4  C005     West              $10      0.014286           False    False             No action
+```
+
+Important idea: custom columns should separate **calculation columns** from **decision columns**. Calculation columns like `Variance` and `Variance_Pct` explain the numbers. Decision columns like `Action` explain what should happen next.
 
 ---
 
@@ -1871,6 +1991,92 @@ df["Percent_of_Reviewer_Total"] = df["Sales"] / df["Reviewer_Total"]
 
 This keeps the original row count.
 
+## 20.8 Complex grouping example: operational summary
+
+A realistic groupby usually answers several questions at once:
+
+- How much volume did each group handle?
+- How many unique records were involved?
+- What percentage of records need review?
+- Which group has the largest risk or opportunity?
+
+```python
+orders = pd.DataFrame({
+    "Order": ["C001", "C002", "C003", "C004", "C005", "C006", "C007"],
+    "Region": ["East", "East", "East", "West", "West", "West", "West"],
+    "Reviewer": ["Ana", "Ana", "Luis", "Luis", "Maria", "Maria", "Ana"],
+    "Customer": ["North", "North", "South", "South", "West", "West", "North"],
+    "Budgeted": [1000, 500, 800, 1200, 700, 900, 400],
+    "Actual": [950, 650, 760, 1500, 690, 1020, 380],
+    "Days_Open": [4, 12, 30, 18, 7, 21, 5]
+})
+
+orders = orders.assign(
+    Variance=lambda d: d["Budgeted"] - d["Actual"],
+    Over_Budget=lambda d: d["Variance"] < 0,
+    Late=lambda d: d["Days_Open"] > 14,
+    Review_Flag=lambda d: d["Over_Budget"] | d["Late"]
+)
+
+summary = (
+    orders
+    .groupby(["Region", "Reviewer"], as_index=False)
+    .agg(
+        Orders=("Order", "nunique"),
+        Customers=("Customer", "nunique"),
+        Total_Budgeted=("Budgeted", "sum"),
+        Total_Actual=("Actual", "sum"),
+        Total_Variance=("Variance", "sum"),
+        Review_Rate=("Review_Flag", "mean"),
+        Average_Days_Open=("Days_Open", "mean"),
+    )
+    .assign(Actual_to_Budget=lambda d: d["Total_Actual"] / d["Total_Budgeted"])
+    .round({"Review_Rate": 2, "Actual_to_Budget": 2})
+    .sort_values(["Review_Rate", "Total_Variance"], ascending=[False, True])
+)
+
+print(summary)
+```
+
+Output:
+
+```text
+  Region Reviewer  Orders  Customers  Total_Budgeted  Total_Actual  Total_Variance  Review_Rate  Average_Days_Open  Actual_to_Budget
+3   West     Luis       1          1            1200          1500            -300         1.00               18.0              1.25
+1   East     Luis       1          1             800           760              40         1.00               30.0              0.95
+4   West    Maria       2          1            1600          1710            -110         0.50               14.0              1.07
+0   East      Ana       2          1            1500          1600            -100         0.50                8.0              1.07
+2   West      Ana       1          1             400           380              20         0.00                5.0              0.95
+```
+
+How to read this result:
+
+- `Orders` and `Customers` describe volume and customer spread.
+- `Total_Variance` shows dollar impact. Negative values mean actual spending exceeded budget.
+- `Review_Rate` is the share of rows in the group where `Review_Flag` is `True`. Because `True` behaves like `1` and `False` behaves like `0`, the mean of a Boolean column becomes a percentage-like rate.
+- Sorting by `Review_Rate` first and `Total_Variance` second puts the most concerning groups near the top.
+
+## 20.9 Group filtering and top records within each group
+
+Sometimes you do not want a summary table. You want the original rows, but only for groups that meet a rule.
+
+```python
+orders["Reviewer_Over_Budget_Total"] = (
+    orders.groupby("Reviewer")["Variance"]
+    .transform(lambda s: s[s < 0].sum())
+)
+
+high_risk_rows = orders[orders["Reviewer_Over_Budget_Total"] <= -250]
+
+top_variance_per_region = (
+    orders.sort_values("Variance")
+    .groupby("Region")
+    .head(2)
+)
+```
+
+Use `transform` when the group calculation needs to return to every original row. Use `agg` when you want one row per group. Use `head`, `tail`, or ranking after sorting when you need the top records inside each group.
+
 ---
 
 # 21. Pivot Tables and Cross Tabs
@@ -2152,6 +2358,114 @@ This adds `_merge`:
 - `right_only`
 
 Useful for audit checks.
+
+## 23.8 Complex example: joining multiple lookup tables
+
+Real projects rarely merge only two tables. A common workflow starts with a transaction table and joins several lookup or reference tables onto it.
+
+```python
+orders = pd.DataFrame({
+    "Order": ["C001", "C002", "C003", "C004", "C005"],
+    "Customer_ID": [10, 10, 20, 30, 40],
+    "Vendor_ID": [1, 2, 1, 3, 99],
+    "Reviewer_ID": [100, 101, 100, 102, 103],
+    "Budgeted": [1000, 500, 800, 1200, 700],
+    "Actual": [950, 650, 760, 1500, 690]
+})
+
+customers = pd.DataFrame({
+    "Customer_ID": [10, 20, 30],
+    "Customer": ["North", "South", "West"],
+    "Region": ["East", "East", "West"]
+})
+
+vendors = pd.DataFrame({
+    "Vendor_ID": [1, 2, 3],
+    "Vendor_Name": ["Acme Supplies", "Blue River", "Canyon Parts"],
+    "Vendor_Tier": ["Preferred", "Standard", "Preferred"]
+})
+
+reviewers = pd.DataFrame({
+    "Reviewer_ID": [100, 101, 102],
+    "Reviewer": ["Ana", "Luis", "Maria"]
+})
+
+merged = (
+    orders
+    .merge(customers, on="Customer_ID", how="left", validate="many_to_one")
+    .merge(vendors, on="Vendor_ID", how="left", validate="many_to_one")
+    .merge(reviewers, on="Reviewer_ID", how="left", validate="many_to_one")
+    .assign(
+        Variance=lambda d: d["Budgeted"] - d["Actual"],
+        Needs_Reference_Review=lambda d: (
+            d[["Customer", "Vendor_Name", "Reviewer"]].isna().any(axis=1)
+        )
+    )
+)
+
+print(merged[[
+    "Order", "Customer", "Region", "Vendor_Name",
+    "Vendor_Tier", "Reviewer", "Variance", "Needs_Reference_Review"
+]])
+```
+
+Output:
+
+```text
+  Order Customer Region     Vendor_Name Vendor_Tier Reviewer  Variance  Needs_Reference_Review
+0  C001    North   East   Acme Supplies  Preferred      Ana        50                   False
+1  C002    North   East      Blue River   Standard     Luis      -150                   False
+2  C003    South   East   Acme Supplies  Preferred      Ana        40                   False
+3  C004     West   West    Canyon Parts  Preferred    Maria      -300                   False
+4  C005      NaN    NaN             NaN        NaN      NaN        10                    True
+```
+
+What this shows:
+
+- `orders` is the base table because every output row should represent an order.
+- Each lookup table is joined with `how="left"` so missing reference data does not delete orders.
+- `validate="many_to_one"` confirms that many orders can match one lookup record, but the lookup key should not duplicate.
+- `Needs_Reference_Review` flags rows where at least one lookup failed.
+
+## 23.9 Merge audit pattern with `_merge`
+
+When data quality matters, audit the join before trusting the output.
+
+```python
+audit = orders.merge(
+    vendors,
+    on="Vendor_ID",
+    how="left",
+    indicator=True,
+    validate="many_to_one"
+)
+
+unmatched_vendors = audit[audit["_merge"].eq("left_only")]
+
+print(unmatched_vendors[["Order", "Vendor_ID", "_merge"]])
+```
+
+Output:
+
+```text
+  Order  Vendor_ID     _merge
+4  C005         99  left_only
+```
+
+Use this pattern before exporting or summarizing merged data. A failed lookup can silently create missing customer names, vendor names, prices, categories, or reviewer assignments.
+
+## 23.10 `join` when the index is the key
+
+`join` is most convenient when one or both DataFrames already use the key as the index.
+
+```python
+orders_by_customer = orders.set_index("Customer_ID")
+customer_lookup = customers.set_index("Customer_ID")
+
+joined = orders_by_customer.join(customer_lookup, how="left")
+```
+
+Use `merge` for most business joins because it makes the key columns explicit. Use `join` when index-based alignment is intentional.
 
 ---
 
