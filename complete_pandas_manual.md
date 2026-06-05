@@ -93,7 +93,7 @@ The examples use small datasets so the logic is easy to understand. In real work
 
 The pandas fundamentals now include more advanced, realistic examples for the areas that usually matter most in day-to-day data manipulation:
 
-- **Reusable masks and complex filters** for combining business rules without creating unreadable one-line expressions.
+- **Reusable masks and complex filters** for combining business rules without creating unreadable one-line expressions, plus guidance on when to create masks, copies, and temporary DataFrames.
 - **Custom column creation** that separates raw calculations, Boolean flags, formatted values, and final action labels.
 - **Grouping and aggregation** that produces operational summaries with counts, unique counts, totals, averages, rates, percentages, and sorted risk indicators.
 - **Joining multiple tables** with merge validation, missing-reference flags, and join audit checks.
@@ -1065,6 +1065,54 @@ Why this pattern is powerful:
 - You can reuse masks for filtering, updating, charting, or exports.
 - The final filter reads like a checklist instead of one long unreadable expression.
 - `.copy()` makes it clear that `review_queue` is a separate table you can safely modify.
+
+## 10.10 When to create masks, copies, and temporary DataFrames
+
+As a practical rule, create a named helper object when it makes the analysis safer or easier to explain. Do not create extra objects only to make the code longer.
+
+| Helper object or function | Purpose | Use it when | Avoid it when |
+| --- | --- | --- | --- |
+| Boolean mask, such as `large_overage = df["Variance"] < -100` | Stores a True/False rule for each row | The condition has business meaning, will be reused, or would make a filter hard to read | The condition is short, used once, and obvious |
+| Filtered DataFrame, such as `review_queue = df[mask]` | Stores the rows that match a rule | You need to inspect, export, chart, summarize, or pass those rows to another step | You only need one quick calculation and can keep the expression readable |
+| `.copy()` | Creates an independent DataFrame instead of a view-like slice | You plan to edit the filtered result, add columns, rename columns, or pass it to a function that changes it | You are only reading from the filtered result |
+| `.loc[row_mask, column_name] = value` | Updates selected rows and selected columns in the original DataFrame | You want to change the original table safely and clearly | You want a separate table that should not affect the original |
+| `.query()` | Filters with a readable string expression | The filter is mostly simple column comparisons and arithmetic | Column names are awkward, conditions need many Python variables, or `.loc`/masks are clearer |
+| `.assign()` | Adds columns while returning a new DataFrame, often in a chain | You are building a clean pipeline and want each step to return a DataFrame | The calculation needs many separate debugging steps |
+| `.pipe()` | Sends the DataFrame into a custom function inside a method chain | You want reusable cleaning or validation steps with a clear purpose | A direct method call is simpler |
+
+Use a **mask** when the rule itself is important enough to name:
+
+```python
+closed_orders = orders["Status"].eq("Closed")
+large_overage = orders["Variance"] < -100
+needs_review = closed_orders & large_overage
+
+review_queue = orders.loc[needs_review].copy()
+```
+
+Use `.copy()` when the filtered result becomes its own working table:
+
+```python
+review_queue = orders.loc[needs_review].copy()
+review_queue["Review_Reason"] = "Closed order over budget by more than 100"
+```
+
+This is safer than editing a slice because it makes your intent clear: `review_queue` is now separate from `orders`.
+
+Use `.loc` when you want to update the original DataFrame directly:
+
+```python
+orders.loc[needs_review, "Needs_Review"] = True
+```
+
+This says exactly which rows and which column should change in `orders`.
+
+A good workflow is:
+
+1. Create masks for meaningful rules.
+2. Combine masks into a final rule.
+3. Use `.loc` to update the original table, or use `.loc[mask].copy()` to create a separate table for reporting, exporting, or further editing.
+4. Add a short comment or clear variable name when a function's purpose is not obvious.
 
 ---
 
