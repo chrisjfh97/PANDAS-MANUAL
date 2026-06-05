@@ -1,10 +1,5 @@
 # Complete pandas Manual: Practical Data Analysis, Statistics, and Plotting
 
-**Author:** Generated for Chris Fonseca
-**Format:** Markdown manual with linked image assets
-**Main libraries:** `pandas`, `numpy`, `matplotlib`
-**Recommended use:** Open this `.md` file in VS Code, GitHub, Obsidian, or any Markdown viewer. Keep the `pandas_manual_assets` folder next to this file so images load correctly.
-
 ---
 
 ## Table of Contents
@@ -89,9 +84,9 @@ The manual is split into four major parts so pandas skills, statistics concepts,
 
 The examples use small datasets so the logic is easy to understand. In real work, the same code patterns apply to large Excel files, CSV reports, order reports, audit logs, productivity reports, and automation outputs.
 
-## 1.1 What was expanded in the pandas section
+## 1.1 Areas of focus
 
-The pandas fundamentals now include more advanced, realistic examples for the areas that usually matter most in day-to-day data manipulation:
+The pandas fundamentals emphasize realistic examples for the areas that usually matter most in day-to-day data manipulation:
 
 - **Reusable masks and complex filters** for combining business rules without creating unreadable one-line expressions, plus guidance on when to create masks, copies, and temporary DataFrames.
 - **Custom column creation** that separates raw calculations, Boolean flags, formatted values, and final action labels.
@@ -3713,8 +3708,6 @@ This part focuses on visual analysis. It separates chart-reading skills from the
 
 # 28. Charts for Understanding Statistics
 
-Markdown can include charts as image files. The charts below are saved in the `pandas_manual_assets` folder; the code examples show how to generate similar charts with pandas/Matplotlib.
-
 ## 28.1 Mean, median, and mode chart
 
 ![Mean, Median, and Mode](pandas_manual_assets/stats_mean_median_mode.svg)
@@ -6624,8 +6617,6 @@ summary = df.groupby("Customer")["Amount"].sum().reset_index()
 ---
 
 # 42. References
-
-This manual was prepared using current official documentation patterns and common pandas/Matplotlib usage.
 
 Official references:
 
