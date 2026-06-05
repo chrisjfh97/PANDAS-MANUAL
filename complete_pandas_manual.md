@@ -614,6 +614,93 @@ df = pd.read_excel("orders.xlsx", header=1)
 
 This tells pandas that row 2 in Excel should be used as the header row, because pandas uses zero-based row numbering.
 
+## 7.8 File formats and engines: `openpyxl`, `pyarrow`, and others
+
+An **engine** is the lower-level library pandas uses to read or write a file format. pandas gives you one friendly function, such as `read_excel`, `read_csv`, or `read_parquet`, but different engines may do the actual parsing behind the scenes.
+
+You usually do not need to choose an engine manually. Choose one when you need a specific file type, better speed, better data type handling, or more predictable behavior across computers.
+
+### Excel engines
+
+Modern Excel files usually use `openpyxl`:
+
+```python
+df = pd.read_excel("orders.xlsx", engine="openpyxl")
+
+with pd.ExcelWriter("report.xlsx", engine="openpyxl") as writer:
+    summary_df.to_excel(writer, sheet_name="Summary", index=False)
+```
+
+`openpyxl` is a good default when you work with `.xlsx` or `.xlsm` workbooks. It understands Excel workbook structure, sheet names, cell values, and many common Excel details. Use it when your source or final output must remain an Excel workbook.
+
+Other Excel engines exist for specific cases:
+
+| Engine | Common use | Why choose it |
+|---|---|---|
+| `openpyxl` | `.xlsx`, `.xlsm` | Reliable default for modern Excel workbooks |
+| `xlsxwriter` | Writing `.xlsx` files | Strong formatting features for output reports; generally used for writing, not reading |
+| `xlrd` | Older `.xls` files | Legacy Excel support |
+| `pyxlsb` | `.xlsb` binary Excel files | Useful when a source system exports binary workbooks |
+| `odf` | `.ods` OpenDocument spreadsheets | Useful for LibreOffice/OpenOffice files |
+
+Practical rule: if you have normal Excel files, start with `openpyxl`. If the file extension is unusual, choose the engine that matches the file format.
+
+### CSV engines
+
+CSV is plain text, but pandas can parse it with different engines:
+
+```python
+df = pd.read_csv("orders.csv", engine="c")
+```
+
+The default C engine is usually fast and supports most normal CSV work. The Python engine is slower but can handle some unusual separators and parsing situations. The PyArrow engine can be faster on large files and can work well with Arrow-backed data types, but not every CSV option behaves exactly the same across engines.
+
+```python
+df = pd.read_csv(
+    "large_orders.csv",
+    engine="pyarrow",
+    dtype_backend="pyarrow"
+)
+```
+
+Use the PyArrow CSV engine when you are reading large files, already use Arrow/Parquet in your workflow, or want to test whether Arrow-backed columns reduce memory use. Always validate row counts, column types, missing values, and a few known records after changing engines.
+
+### Parquet and Arrow-oriented formats
+
+Parquet is often a better format than CSV or Excel for repeated analytical work:
+
+```python
+df.to_parquet("orders.parquet", engine="pyarrow", index=False)
+
+df = pd.read_parquet("orders.parquet", engine="pyarrow")
+```
+
+PyArrow is commonly used for Parquet because it is designed for columnar data. Benefits can include smaller files, faster reads for selected columns, preservation of data types, and better performance when data moves between pandas and tools such as Spark, DuckDB, or cloud data warehouses.
+
+A practical workflow is:
+
+1. Receive messy files as Excel or CSV.
+2. Clean and validate them in pandas.
+3. Save the cleaned version as Parquet for future work.
+4. Read the Parquet file for repeated analysis instead of repeatedly parsing the original Excel or CSV file.
+
+### Engine decision checklist
+
+Ask these questions before choosing an engine:
+
+- What file extension do I actually have: `.csv`, `.xlsx`, `.xlsb`, `.parquet`, or something else?
+- Do I need Excel workbook features, or do I only need tabular data?
+- Is this a one-time import, or will I read this data many times?
+- Is speed, memory, or exact Excel compatibility more important?
+- Will another person run this code on a different computer where optional packages may not be installed?
+
+If you choose a non-default engine, document why:
+
+```python
+# Use pyarrow because this file is large and becomes the standard cleaned dataset.
+df = pd.read_csv("large_orders.csv", engine="pyarrow", dtype_backend="pyarrow")
+```
+
 ---
 
 # 8. Inspecting Data
@@ -1963,6 +2050,77 @@ Row-wise `apply` is flexible but slower than vectorized logic.
 | Replace known values | `replace` or `map` |
 | Custom row-based text | `apply(axis=1)` |
 | Complex function per value | `apply` |
+
+## 19.7 When a loop is the right choice
+
+A common beginner rule is: **avoid loops over DataFrame rows when pandas already has a column-based operation for the task**. That rule is useful, but it does not mean loops are always wrong. It means you should know why you are using one.
+
+Use pandas alternatives first for table calculations:
+
+```python
+# Good: column-based calculation
+df["Variance"] = df["Budgeted"] - df["Actual"]
+
+# Good: conditional column
+df["Status"] = np.select(
+    [df["Variance"] > 0, df["Variance"] < 0],
+    ["Under Budget", "Over Budget"],
+    default="On Budget"
+)
+```
+
+Avoid this pattern when the same work can be done by columns:
+
+```python
+# Usually avoid: row loop for a normal column calculation
+statuses = []
+for _, row in df.iterrows():
+    if row["Budgeted"] - row["Actual"] > 0:
+        statuses.append("Under Budget")
+    else:
+        statuses.append("Not Under Budget")
+
+df["Status"] = statuses
+```
+
+The loop is more code, usually slower, and easier to break when data types or missing values change.
+
+Loops are reasonable when the work is **not really a DataFrame calculation**. Good examples include:
+
+- Reading many files from a folder.
+- Calling an API once per customer, order, or date range.
+- Writing one output file per group.
+- Building a list of dictionaries before creating a DataFrame.
+- Running an operation with side effects, such as sending emails or creating charts.
+- Processing chunks from a file that is too large to load all at once.
+
+Example: a loop is appropriate for combining many files because each loop step reads a separate file:
+
+```python
+from pathlib import Path
+
+frames = []
+for path in Path("monthly_reports").glob("*.csv"):
+    monthly = pd.read_csv(path)
+    monthly["Source_File"] = path.name
+    frames.append(monthly)
+
+df = pd.concat(frames, ignore_index=True)
+```
+
+Example: a loop is appropriate for exporting one workbook per region:
+
+```python
+for region, region_df in df.groupby("Region"):
+    output_path = f"reports/{region}_orders.xlsx"
+    region_df.to_excel(output_path, index=False)
+```
+
+Decision rule:
+
+1. If you are creating or transforming a column, try vectorization, `map`, `replace`, `np.where`, `np.select`, `where`, `mask`, `groupby`, or `merge` first.
+2. If you are doing work around the DataFrame, such as files, APIs, charts, emails, or chunks, a loop is often clear and appropriate.
+3. If you must loop over rows, prefer `itertuples()` over `iterrows()` for speed, and keep the row loop small and well documented.
 
 ---
 
@@ -5445,6 +5603,16 @@ Use chaining when it improves readability. Do not force it when simple steps are
 
 # 33. Performance Tips
 
+Performance work is not about making every line clever. It is about finding the slowest or largest part of the workflow and improving that part without making the code hard to trust.
+
+Good performance habits usually follow this order:
+
+1. Read less data.
+2. Use better data types.
+3. Use column-based pandas operations.
+4. Avoid repeated expensive work.
+5. Measure before and after.
+
 ## 33.1 Prefer vectorized operations
 
 Fast:
@@ -5458,6 +5626,8 @@ Slower:
 ```python
 df["Variance"] = df.apply(lambda row: row["Budgeted"] - row["Actual"], axis=1)
 ```
+
+Vectorized code is faster because pandas and NumPy do the work in optimized column operations instead of repeatedly calling Python once per row. It is also usually easier to read because it describes the whole column rule directly.
 
 ## 33.2 Avoid building DataFrames row by row
 
@@ -5479,25 +5649,54 @@ for item in items:
 df = pd.DataFrame(rows)
 ```
 
-## 33.3 Read only needed columns
+Repeatedly concatenating inside a loop forces pandas to keep allocating and copying data. Collect plain Python objects first, then create one DataFrame.
+
+## 33.3 Read only needed rows and columns
 
 ```python
 df = pd.read_excel("large_report.xlsx", usecols=["Order", "Budgeted", "Actual"])
 ```
 
-## 33.4 Use categories for repeated text
+For CSV files, you can also read a preview before loading everything:
+
+```python
+preview = pd.read_csv("large_file.csv", nrows=1_000)
+```
+
+If the data is in SQL, filter and select columns in SQL before loading into pandas. The fastest row is often the row you never load.
+
+## 33.4 Choose efficient data types
+
+Use categories for repeated text:
 
 ```python
 df["Customer"] = df["Customer"].astype("category")
 ```
 
-This can reduce memory usage.
+This can reduce memory usage when a text column has many repeated values and relatively few unique values. Examples include status, region, product category, and customer segment.
+
+Use smaller numeric types only when you are sure the values fit:
+
+```python
+df["Quantity"] = pd.to_numeric(df["Quantity"], downcast="integer")
+df["Unit_Price"] = pd.to_numeric(df["Unit_Price"], downcast="float")
+```
+
+Do not downcast identifiers such as order numbers or ZIP codes just because they contain digits. Those are labels, not numbers for arithmetic.
 
 ## 33.5 Check memory usage
 
 ```python
 df.info(memory_usage="deep")
 ```
+
+For a column-by-column view:
+
+```python
+memory_by_column = df.memory_usage(deep=True).sort_values(ascending=False)
+```
+
+Start with the largest columns. Optimizing a tiny column rarely matters.
 
 ## 33.6 Process large files in chunks
 
@@ -5514,7 +5713,88 @@ for chunk in chunks:
 final = pd.concat(results).groupby(level=0).sum()
 ```
 
-`read_excel` does not support chunking the same way CSV does, so very large Excel files may need a different strategy.
+`read_excel` does not support chunking the same way CSV does, so very large Excel files may need a different strategy. Common alternatives are asking for CSV exports, converting the cleaned data to Parquet, loading the file into a database, or splitting the workbook before analysis.
+
+## 33.7 Avoid repeated calculations
+
+If you use the same expensive calculation more than once, save it as a column or variable:
+
+```python
+df["Margin"] = df["Revenue"] - df["Cost"]
+df["Margin_Rate"] = df["Margin"] / df["Revenue"]
+
+profitable = df[df["Margin"] > 0]
+```
+
+This is clearer and avoids recalculating the same expression in multiple places.
+
+## 33.8 Sort only when sorting matters
+
+Sorting is useful for reports, rankings, and time order, but it can be expensive on large data. Do not sort just because it looks neat halfway through a workflow. Sort near the end when the final output needs it.
+
+```python
+summary = (
+    df.groupby("Customer", as_index=False)["Actual"]
+      .sum()
+      .sort_values("Actual", ascending=False)
+)
+```
+
+## 33.9 Use indexes intentionally
+
+An index can make repeated label lookups or joins clearer, but setting an index is not automatically faster for every operation. Use an index when it represents a real lookup key and you will use it repeatedly.
+
+```python
+customer_lookup = customers.set_index("Customer_ID")
+orders = orders.join(customer_lookup, on="Customer_ID", validate="many_to_one")
+```
+
+For one-time joins, `merge` is often clearer. For repeated lookup-style work, an index can be helpful.
+
+## 33.10 Use the right file format for repeated work
+
+CSV and Excel are common exchange formats, but they are not always the best storage formats for analysis. If you repeatedly read the same cleaned dataset, consider Parquet:
+
+```python
+clean_orders.to_parquet("clean_orders.parquet", engine="pyarrow", index=False)
+clean_orders = pd.read_parquet("clean_orders.parquet", engine="pyarrow")
+```
+
+Parquet can preserve data types better than CSV, often uses less disk space, and can be faster to read. This is especially useful after you finish the messy one-time cleaning step.
+
+## 33.11 Measure before optimizing
+
+Use simple timing while developing:
+
+```python
+import time
+
+start = time.perf_counter()
+summary = df.groupby("Customer")["Actual"].sum()
+elapsed = time.perf_counter() - start
+
+print(f"Groupby took {elapsed:.2f} seconds")
+```
+
+In notebooks, `%timeit` is useful for comparing small alternatives:
+
+```python
+%timeit df["Budgeted"] - df["Actual"]
+```
+
+Measure realistic data, not only tiny examples. An optimization that matters for 10 million rows may not matter for 1,000 rows.
+
+## 33.12 Performance checklist
+
+Before rewriting code, check:
+
+- Am I loading columns or rows I never use?
+- Are repeated text columns using `category` where appropriate?
+- Am I using vectorized operations instead of row-wise `apply` or row loops?
+- Am I concatenating once instead of repeatedly inside a loop?
+- Can SQL do filtering or aggregation before pandas loads the data?
+- Would Parquet be better than repeatedly reading CSV or Excel?
+- Did I measure the slow step before and after the change?
 
 ---
 
@@ -7369,6 +7649,11 @@ Official references:
 - pandas DataFrame.describe API reference: https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.describe.html
 - pandas GroupBy API reference: https://pandas.pydata.org/docs/reference/groupby.html
 - pandas SQL IO reference: https://pandas.pydata.org/docs/reference/io.html#sql
+- pandas read CSV reference: https://pandas.pydata.org/docs/reference/api/pandas.read_csv.html
+- pandas read Excel reference: https://pandas.pydata.org/docs/reference/api/pandas.read_excel.html
+- pandas Parquet IO reference: https://pandas.pydata.org/docs/reference/api/pandas.read_parquet.html
+- Apache Arrow Python documentation: https://arrow.apache.org/docs/python/
+- openpyxl documentation: https://openpyxl.readthedocs.io/
 - Python sqlite3 documentation: https://docs.python.org/3/library/sqlite3.html
 - SQLAlchemy documentation: https://docs.sqlalchemy.org/
 - Matplotlib examples: https://matplotlib.org/stable/gallery/index.html
