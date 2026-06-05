@@ -115,6 +115,7 @@
       - [17.4 Date difference](#174-date-difference)
       - [17.5 Filter by date](#175-filter-by-date)
       - [17.6 Group by month](#176-group-by-month)
+      - [17.7 Create date sequences with `pd.date_range`](#177-create-date-sequences-with-pddaterange)
   - [Subpart I-E: Transformation, Aggregation, and Reshaping](#subpart-i-e-transformation-aggregation-and-reshaping)
     - [18. Conditional Logic in pandas](#18-conditional-logic-in-pandas)
       - [18.1 Simple condition](#181-simple-condition)
@@ -1272,6 +1273,8 @@ Include missing values:
 df["Status"].value_counts(dropna=False)
 ```
 
+By default, `value_counts()` leaves missing values out. `dropna=False` means "do not drop missing values from the count." Use it when missing values are meaningful data-quality information, such as blank statuses, missing categories, or unassigned owners.
+
 Normalize to percentages:
 
 ```python
@@ -2377,6 +2380,32 @@ Convert period back to timestamp for plotting:
 monthly.index = monthly.index.to_timestamp()
 ```
 
+## 17.7 Create date sequences with `pd.date_range`
+
+`pd.date_range()` creates a sequence of dates. This is useful for example data, calendars, time-series templates, and reports that must include every day even when no records exist for some dates.
+
+```python
+dates = pd.date_range("2026-01-01", periods=7)
+print(dates)
+```
+
+Read this as: start on January 1, 2026 and create 7 dates. The `periods` argument means "how many dates to create." Because no frequency is specified, pandas uses daily dates by default.
+
+Common patterns:
+
+```python
+# Seven daily dates starting from January 1, 2026
+pd.date_range("2026-01-01", periods=7)
+
+# Month-start dates for a reporting calendar
+pd.date_range("2026-01-01", periods=6, freq="MS")
+
+# Every date between two endpoints
+pd.date_range("2026-01-01", "2026-01-07")
+```
+
+Use `pd.to_datetime()` when converting existing values into dates. Use `pd.date_range()` when creating a new date sequence.
+
 ---
 
 # Subpart I-E: Transformation, Aggregation, and Reshaping
@@ -2511,6 +2540,8 @@ def create_note(row):
 df["Note"] = df.apply(create_note, axis=1)
 ```
 
+The `f` before the quoted text makes this an **f-string**, which is Python's shortcut for inserting values inside text. Anything inside `{...}` is evaluated and placed into the string. In this example, `{row['Order']}` inserts the current row's order value and `{row['Variance']}` inserts the current row's variance value.
+
 `axis=1` tells `apply` to send one row at a time into the function. Without `axis=1`, pandas applies the function column-by-column (`axis=0`).
 
 Row-wise `apply` is flexible but often much slower than vectorized logic because pandas has to build and pass one row at a time into Python. Before using `apply(axis=1)`, check whether normal column math, `np.where`, `np.select`, `map`, or `replace` can do the same job.
@@ -2601,6 +2632,8 @@ for path in Path("monthly_reports").glob("*.csv"):
 
 df = pd.concat(frames, ignore_index=True)
 ```
+
+This example uses Python's standard-library `pathlib` module. `Path("monthly_reports")` points to a folder, `.glob("*.csv")` finds every CSV file in that folder, and `*` is a wildcard meaning "any text." `ignore_index=True` gives the combined DataFrame a fresh row index after the files are stacked.
 
 Example: a loop is appropriate for exporting one workbook per region:
 
@@ -2703,6 +2736,24 @@ Output:
 ```
 
 This is one of the most useful pandas patterns. The `.reset_index()` at the end turns `Reviewer` back into a normal column. Without it, `Reviewer` would be stored as the index, which is fine for some calculations but less convenient for merging, exporting, or selecting columns with double brackets.
+
+You can also ask `groupby` to keep the group key as a normal column from the start:
+
+```python
+summary = df.groupby("Reviewer", as_index=False).agg(
+    Total_Orders=("Orders", "sum"),
+    Average_Orders=("Orders", "mean")
+)
+```
+
+`as_index=False` means "do not use the group labels as the result index." For many beginner and business-reporting workflows, this is easier because the result stays shaped like a normal table. These two patterns usually produce the same practical table shape:
+
+```python
+df.groupby("Reviewer").agg(Total_Orders=("Orders", "sum")).reset_index()
+df.groupby("Reviewer", as_index=False).agg(Total_Orders=("Orders", "sum"))
+```
+
+Beginner rule: use `as_index=False` when you plan to merge, export, sort, chart, or keep working with the grouped result as a regular DataFrame. Use `.reset_index()` when you already have an indexed grouped result and want to turn the index back into columns.
 
 ## 20.4 Group and count rows
 
@@ -3019,7 +3070,7 @@ february = pd.DataFrame({"Order": ["C003", "C004"], "Month": ["Feb", "Feb"]})
 all_orders = pd.concat([january, february], ignore_index=True)
 ```
 
-Use `ignore_index=True` to create a new clean index.
+Use `ignore_index=True` to create a new clean index. Without it, pandas keeps the original indexes from each input table, which can create repeated index labels such as `0, 1, 0, 1`. Repeated indexes are not always wrong, but they often confuse beginners after stacking monthly files. For normal row-stacking, `ignore_index=True` is usually the safest default.
 
 ## 23.2 Concatenate columns
 
@@ -3088,14 +3139,18 @@ merged = orders.merge(
 
 This helps catch unexpected duplicate matches.
 
+`validate` does not change the join result. It checks whether the join keys match the relationship you expect and raises an error if the data violates that relationship. This is especially important before production reporting because duplicate lookup keys can multiply rows and inflate totals.
+
 Common validations:
 
-| Validation | Meaning |
-|---|---|
-| `one_to_one` | Each key appears once in each table |
-| `one_to_many` | Left key unique, right key can repeat |
-| `many_to_one` | Left key can repeat, right key unique |
-| `many_to_many` | Both sides can repeat |
+| Validation | What pandas checks | Typical business meaning |
+|---|---|---|
+| `one_to_one` | Each key appears at most once in the left table and at most once in the right table | Two tables at the same grain, such as one employee row matched to one HR row |
+| `one_to_many` | Each key appears at most once in the left table; the right table may have multiple matches per key | One customer record matched to many orders |
+| `many_to_one` | The left table may have multiple rows per key; each key appears at most once in the right table | Many orders matched to one customer, vendor, product, or reviewer lookup row |
+| `many_to_many` | Both sides may repeat keys | Allowed, but safest only when you intentionally expect row multiplication |
+
+Beginner rule: lookup-table joins are usually `validate="many_to_one"` because many transaction rows should match one lookup row. Use `many_to_many` only when repeated matches on both sides are intentional and you have checked the row counts.
 
 ## 23.7 Indicator column
 
@@ -6554,6 +6609,8 @@ reviewer_summary = orders.groupby("Reviewer").agg(
 ).reset_index()
 ```
 
+The lambda creates a True/False test for each row, then sums it. This works because `True` behaves like `1` and `False` behaves like `0` in numeric summaries. See Section 20.8 for the same idea used to calculate a Boolean rate with `.mean()`.
+
 ## 31.8 Export results
 
 ```python
@@ -7143,6 +7200,8 @@ daily = pd.DataFrame({
 })
 ```
 
+Here `pd.date_range("2026-01-01", periods=7)` creates seven daily dates starting on January 1, 2026. See Section 17.7 for a fuller introduction to `pd.date_range()`.
+
 ## 36.1 Cumulative sum
 
 ```python
@@ -7243,6 +7302,8 @@ Interpretation:
 - `100 to 500` becomes `Medium`.
 - `> 500` becomes `Large`.
 
+`float("inf")` means positive infinity, and `-float("inf")` means negative infinity. They are used as open-ended bin boundaries when the first or last bucket should catch every value beyond a threshold. You may also see `np.inf` for positive infinity; it represents the same concept as `float("inf")`.
+
 ## 37.2 Equal-sized groups with `qcut`
 
 ```python
@@ -7271,6 +7332,8 @@ bucket_summary = df.groupby("Variance_Bucket", observed=True).agg(
 ).reset_index()
 ```
 
+`pd.cut()` creates a categorical bucket column. When grouping categorical columns, `observed=True` tells pandas to include only categories that actually appear in the data. Without it, pandas may include unobserved categories in grouped output, especially when multiple categorical groupers are involved. Use `observed=True` when you want the summary to show only real buckets with data.
+
 ## 37.5 When buckets are useful
 
 Use buckets when individual values are too detailed.
@@ -7289,6 +7352,17 @@ Examples:
 
 pandas is often used to combine many reports before analysis. Keep this workflow separate from database work: file ingestion is usually about finding files, standardizing columns, and keeping an audit trail; SQL work is usually about requesting the right rows from a database before pandas receives them.
 
+The examples in this section use `pathlib`, which is part of Python's standard library rather than pandas.
+
+```python
+from pathlib import Path
+
+folder = Path("reports")
+files = folder.glob("*.csv")
+```
+
+`Path("reports")` represents the `reports` folder as a path object. `.glob("*.csv")` finds files in that folder whose names match the pattern. The `*` wildcard means "any text," so `*.csv` means "any filename ending in `.csv`." Each item returned by `.glob()` is a path object, so `file.name` gives just the filename while `file` can be passed directly to `pd.read_csv()` or `pd.read_excel()`.
+
 ## 38.1 Read all CSV files in a folder
 
 ```python
@@ -7306,7 +7380,7 @@ for file in files:
 combined = pd.concat(frames, ignore_index=True)
 ```
 
-Adding `Source_File` helps audit where each row came from.
+Adding `Source_File` helps audit where each row came from. `ignore_index=True` gives the combined table a fresh row index instead of preserving each file's original row numbers, which would usually repeat across files.
 
 ## 38.2 Read all Excel files in a folder
 
@@ -7994,6 +8068,8 @@ output.to_sql(
 )
 ```
 
+`method="multi"` tells pandas to send multiple rows per SQL `INSERT` statement when the database driver supports it. This can be much faster than inserting one row at a time. `chunksize=10_000` controls how many DataFrame rows pandas writes per batch, which helps avoid very large SQL statements and reduces memory pressure. This is a write-side batching setting; it is related in spirit to `read_sql_query(..., chunksize=...)`, but here the chunks are batches being written to the database instead of batches being read from it.
+
 Good append checks:
 
 - Confirm the destination table is the correct table.
@@ -8486,6 +8562,9 @@ df["MonthName"] = df["Date"].dt.month_name()
 df["Weekday"] = df["Date"].dt.day_name()
 df["DaysOpen"] = (pd.Timestamp.today().normalize() - df["Date"]).dt.days
 
+# Create a new sequence of dates
+pd.date_range("2026-01-01", periods=7)
+
 df = df.set_index("Date")
 monthly = df.resample("ME")["Amount"].sum()
 ```
@@ -8632,7 +8711,7 @@ df["PreviousAmount"] = df["Amount"].shift(1)
 ```python
 df["AmountBand"] = pd.cut(
     df["Amount"],
-    bins=[0, 100, 500, 1000, np.inf],
+    bins=[0, 100, 500, 1000, np.inf],  # np.inf means no upper limit
     labels=["Small", "Medium", "Large", "Very Large"]
 )
 
