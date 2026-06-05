@@ -50,8 +50,7 @@
 39. [Styling Tables and Creating Review Outputs](#39-styling-tables-and-creating-review-outputs)
 40. [Common Errors and How to Fix Them](#40-common-errors-and-how-to-fix-them)
 41. [Mini Cheat Sheet](#41-mini-cheat-sheet)
-42. [Practice Exercises](#42-practice-exercises)
-43. [References](#43-references)
+42. [References](#42-references)
 
 ---
 
@@ -3873,122 +3872,7 @@ plt.show()
 
 ---
 
-# 42. Practice Exercises
-
-## Exercise 1: Load and inspect
-
-1. Read an Excel file.
-2. Print the first 10 rows.
-3. Print the shape.
-4. Print column names.
-5. Print data types.
-
-Starter code:
-
-```python
-import pandas as pd
-
-df = pd.read_excel("your_file.xlsx")
-
-print(df.head(10))
-print(df.shape)
-print(df.columns.tolist())
-print(df.dtypes)
-```
-
-## Exercise 2: Clean columns
-
-1. Strip spaces from headers.
-2. Replace line breaks with spaces.
-3. Convert headers to title case.
-
-```python
-df.columns = (
-    df.columns
-      .str.strip()
-      .str.replace("\n", " ", regex=False)
-      .str.title()
-)
-```
-
-## Exercise 3: Calculate variance
-
-1. Convert `Expected` and `Allowed` to numeric.
-2. Create `Variance`.
-3. Filter underpaid records.
-
-```python
-df["Expected"] = pd.to_numeric(df["Expected"], errors="coerce")
-df["Allowed"] = pd.to_numeric(df["Allowed"], errors="coerce")
-
-df["Variance"] = df["Expected"] - df["Allowed"]
-
-underpaid = df[df["Variance"] > 0]
-```
-
-## Exercise 4: Create payment status
-
-```python
-conditions = [
-    df["Variance"] > 0,
-    df["Variance"] < 0,
-    df["Variance"] == 0
-]
-choices = ["Underpaid", "Overpaid", "Correct"]
-
-df["Payment_Status"] = np.select(conditions, choices, default="Review")
-```
-
-## Exercise 5: Group by client
-
-```python
-client_summary = df.groupby("Client").agg(
-    Claims=("Reference", "nunique"),
-    Total_Expected=("Expected", "sum"),
-    Total_Allowed=("Allowed", "sum"),
-    Total_Variance=("Variance", "sum"),
-    Average_Variance=("Variance", "mean"),
-    Median_Variance=("Variance", "median")
-).reset_index()
-```
-
-## Exercise 6: Plot variance by client
-
-```python
-client_summary.plot(x="Client", y="Total_Variance", kind="bar")
-plt.title("Total Variance by Client")
-plt.xlabel("Client")
-plt.ylabel("Total Variance")
-plt.tight_layout()
-plt.show()
-```
-
-## Exercise 7: Detect outliers
-
-```python
-q1 = df["Variance"].quantile(0.25)
-q3 = df["Variance"].quantile(0.75)
-iqr = q3 - q1
-
-lower = q1 - 1.5 * iqr
-upper = q3 + 1.5 * iqr
-
-outliers = df[(df["Variance"] < lower) | (df["Variance"] > upper)]
-```
-
-## Exercise 8: Export a multi-sheet report
-
-```python
-with pd.ExcelWriter("analysis_output.xlsx", engine="openpyxl") as writer:
-    df.to_excel(writer, sheet_name="All Data", index=False)
-    underpaid.to_excel(writer, sheet_name="Underpaid", index=False)
-    client_summary.to_excel(writer, sheet_name="Client Summary", index=False)
-    outliers.to_excel(writer, sheet_name="Outliers", index=False)
-```
-
----
-
-# 43. References
+# 42. References
 
 This manual was prepared using current official documentation patterns and common pandas/Matplotlib usage.
 
