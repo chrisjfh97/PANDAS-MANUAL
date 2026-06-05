@@ -6261,13 +6261,42 @@ Always verify row counts before and after major transformations.
 
 # 41. Mini Cheat Sheet
 
+This quick reference collects the most common pandas patterns from the manual. It is intentionally compact, but it is broad enough to use as a day-to-day checklist when starting an analysis, cleaning a report, building a summary, or exporting review files.
+
+## Imports and setup
+
+```python
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+
+pd.set_option("display.max_columns", None)
+pd.set_option("display.width", 120)
+```
+
 ## Read/write
 
 ```python
+# CSV
 pd.read_csv("file.csv")
+pd.read_csv("file.csv", usecols=["Order", "Amount"], parse_dates=["Date"])
+pd.read_csv("file.csv", dtype={"Zip": "string"})
+
+# Excel
 pd.read_excel("file.xlsx")
+pd.read_excel("file.xlsx", sheet_name="Summary")
+sheets = pd.read_excel("file.xlsx", sheet_name=None)  # dictionary of DataFrames
+
+# Other common formats
+pd.read_json("file.json")
+pd.read_parquet("file.parquet")
+pd.read_sql("select * from orders", connection)
+
+# Export
 df.to_csv("output.csv", index=False)
 df.to_excel("output.xlsx", index=False)
+df.to_json("output.json", orient="records", indent=2)
+df.to_parquet("output.parquet", index=False)
 ```
 
 ## Inspect
@@ -6275,48 +6304,140 @@ df.to_excel("output.xlsx", index=False)
 ```python
 df.head()
 df.tail()
+df.sample(5, random_state=1)
 df.shape
 df.info()
 df.describe()
+df.describe(include="all")
 df.dtypes
 df.columns.tolist()
+df.index
+df.nunique()
+df.isna().sum()
+df.memory_usage(deep=True)
 ```
 
-## Select
+## Select columns and rows
 
 ```python
+# Columns
 df["Column"]
 df[["Col1", "Col2"]]
-df.loc[rows, columns]
-df.iloc[row_positions, column_positions]
+df.filter(like="Amount")
+df.filter(regex="Amount|Revenue")
+
+# Label-based selection
+df.loc[:, ["Customer", "Amount"]]
+df.loc[df["Amount"] > 100, ["Customer", "Amount"]]
+
+# Position-based selection
+df.iloc[0]
+df.iloc[:10, :3]
+
+# Scalar lookup
+df.at[5, "Amount"]
+df.iat[0, 2]
 ```
 
-## Filter
+## Filter rows
 
 ```python
 df[df["Amount"] > 100]
 df[(df["Amount"] > 100) & (df["Status"] == "Open")]
+df[(df["Amount"] < 0) | (df["Status"] == "Cancelled")]
+df[~df["Status"].eq("Closed")]
 df[df["Status"].isin(["Open", "Pending"])]
 df[df["Name"].str.contains("abc", case=False, na=False)]
+df[df["Date"].between("2026-01-01", "2026-01-31")]
+df.query("Amount > 100 and Status == 'Open'")
 ```
 
-## Clean
+## Sort, rank, and get top/bottom records
+
+```python
+df.sort_values("Amount")
+df.sort_values(["Customer", "Amount"], ascending=[True, False])
+df.nlargest(10, "Amount")
+df.nsmallest(10, "Amount")
+df["AmountRank"] = df["Amount"].rank(ascending=False, method="dense")
+```
+
+## Clean column names and values
 
 ```python
 df.columns = df.columns.str.strip()
-df = df.dropna(how="all")
-df["Amount"] = pd.to_numeric(df["Amount"], errors="coerce")
-df["Date"] = pd.to_datetime(df["Date"], errors="coerce")
+df.columns = df.columns.str.lower().str.replace(" ", "_", regex=False)
+
+df["Name"] = df["Name"].str.strip()
+df["Status"] = df["Status"].str.title()
+df["Status"] = df["Status"].replace({"In Progress": "Open", "N/A": np.nan})
+df = df.rename(columns={"old_name": "new_name"})
+df = df.drop(columns=["UnusedColumn"])
 ```
 
-## Create columns
+## Missing data
+
+```python
+df.isna().sum()
+df[df["Amount"].isna()]
+df = df.dropna(how="all")
+df = df.dropna(subset=["Customer", "Amount"])
+df["Amount"] = df["Amount"].fillna(0)
+df["Status"] = df["Status"].fillna("Unknown")
+df["Amount"] = df["Amount"].ffill()
+```
+
+## Data types and conversions
+
+```python
+df["Amount"] = pd.to_numeric(df["Amount"], errors="coerce")
+df["Date"] = pd.to_datetime(df["Date"], errors="coerce")
+df["ID"] = df["ID"].astype("string")
+df["Category"] = df["Category"].astype("category")
+df["IsLate"] = df["IsLate"].astype("boolean")
+```
+
+## Dates and times
+
+```python
+df["Year"] = df["Date"].dt.year
+df["Month"] = df["Date"].dt.month
+df["MonthName"] = df["Date"].dt.month_name()
+df["Weekday"] = df["Date"].dt.day_name()
+df["DaysOpen"] = (pd.Timestamp.today().normalize() - df["Date"]).dt.days
+
+df = df.set_index("Date")
+monthly = df.resample("ME")["Amount"].sum()
+```
+
+## String/text operations
+
+```python
+df["Name"].str.lower()
+df["Name"].str.upper()
+df["Name"].str.contains("smith", case=False, na=False)
+df["Code"].str.startswith("A", na=False)
+df["Code"].str.slice(0, 3)
+df[["First", "Last"]] = df["FullName"].str.split(" ", n=1, expand=True)
+```
+
+## Create and update columns
 
 ```python
 df["Variance"] = df["Budgeted"] - df["Actual"]
+df["VariancePct"] = df["Variance"] / df["Budgeted"]
 df["Status"] = np.where(df["Variance"] > 0, "Under Budget", "Other")
+
+df["Risk"] = np.select(
+    [df["Amount"] >= 1000, df["Amount"] >= 500],
+    ["High", "Medium"],
+    default="Low"
+)
+
+df = df.assign(Net=lambda x: x["Revenue"] - x["Cost"])
 ```
 
-## Group
+## Group and aggregate
 
 ```python
 df.groupby("Customer")["Amount"].sum()
@@ -6324,25 +6445,142 @@ df.groupby("Customer")["Amount"].sum()
 df.groupby("Customer").agg(
     Total=("Amount", "sum"),
     Average=("Amount", "mean"),
-    Count=("Order", "nunique")
+    Count=("Order", "nunique"),
+    FirstDate=("Date", "min"),
+    LastDate=("Date", "max")
 ).reset_index()
+
+# Percent of total
+summary = df.groupby("Customer", as_index=False)["Amount"].sum()
+summary["PctOfTotal"] = summary["Amount"] / summary["Amount"].sum()
 ```
 
-## Merge
+## Pivot tables and cross tabs
 
 ```python
-df = left.merge(right, on="Key", how="left")
+pd.pivot_table(
+    df,
+    index="Customer",
+    columns="Status",
+    values="Amount",
+    aggfunc="sum",
+    fill_value=0,
+    margins=True
+)
+
+pd.crosstab(df["Region"], df["Status"])
+pd.crosstab(df["Region"], df["Status"], normalize="index")
 ```
 
-## Stats
+## Reshape data
 
 ```python
+# Wide to long
+long = df.melt(
+    id_vars=["Customer"],
+    value_vars=["Jan", "Feb", "Mar"],
+    var_name="Month",
+    value_name="Amount"
+)
+
+# Long to wide
+wide = long.pivot(index="Customer", columns="Month", values="Amount").reset_index()
+```
+
+## Merge, join, and concatenate
+
+```python
+# Database-style joins
+merged = left.merge(right, on="Key", how="left")
+merged = left.merge(right, on="Key", how="left", validate="many_to_one", indicator=True)
+
+# Different key names
+merged = orders.merge(customers, left_on="CustomerID", right_on="ID", how="left")
+
+# Stack rows or columns
+combined_rows = pd.concat([jan, feb, mar], ignore_index=True)
+combined_cols = pd.concat([left, right], axis=1)
+
+# Index-based join
+joined = left.set_index("Key").join(right.set_index("Key"), how="left")
+```
+
+## Duplicates and data quality checks
+
+```python
+df.duplicated().sum()
+df[df.duplicated(subset=["Order"], keep=False)]
+df = df.drop_duplicates(subset=["Order"])
+
+required = ["Customer", "Date", "Amount"]
+missing_columns = [col for col in required if col not in df.columns]
+
+bad_amounts = df[df["Amount"] < 0]
+missing_customers = df[df["Customer"].isna()]
+```
+
+## Statistics
+
+```python
+df["Amount"].count()
+df["Amount"].sum()
 df["Amount"].mean()
 df["Amount"].median()
 df["Amount"].mode()
+df["Amount"].min()
+df["Amount"].max()
 df["Amount"].std()
+df["Amount"].var()
 df["Amount"].quantile([0.25, 0.5, 0.75])
 df[["A", "B"]].corr()
+```
+
+## Cumulative, rolling, and window calculations
+
+```python
+df = df.sort_values("Date")
+df["RunningTotal"] = df["Amount"].cumsum()
+df["RunningCount"] = np.arange(1, len(df) + 1)
+
+df["Rolling7DayAvg"] = df["Amount"].rolling(window=7, min_periods=1).mean()
+df["PctChange"] = df["Amount"].pct_change()
+df["PreviousAmount"] = df["Amount"].shift(1)
+```
+
+## Binning and segmentation
+
+```python
+df["AmountBand"] = pd.cut(
+    df["Amount"],
+    bins=[0, 100, 500, 1000, np.inf],
+    labels=["Small", "Medium", "Large", "Very Large"]
+)
+
+df["Quartile"] = pd.qcut(df["Amount"], q=4, labels=["Q1", "Q2", "Q3", "Q4"])
+```
+
+## Method chaining pattern
+
+```python
+summary = (
+    df
+    .rename(columns=str.strip)
+    .assign(Amount=lambda x: pd.to_numeric(x["Amount"], errors="coerce"))
+    .dropna(subset=["Customer", "Amount"])
+    .query("Amount > 0")
+    .groupby("Customer", as_index=False)
+    .agg(Total=("Amount", "sum"), Orders=("Order", "nunique"))
+    .sort_values("Total", ascending=False)
+)
+```
+
+## Excel reporting
+
+```python
+with pd.ExcelWriter("review_output.xlsx", engine="xlsxwriter") as writer:
+    df.to_excel(writer, sheet_name="All Data", index=False)
+    summary.to_excel(writer, sheet_name="Summary", index=False)
+    exceptions.to_excel(writer, sheet_name="Exceptions", index=False)
 ```
 
 ## Plot
@@ -6350,10 +6588,37 @@ df[["A", "B"]].corr()
 ```python
 df.plot(x="Month", y="Amount", kind="line")
 df.plot(x="Customer", y="Amount", kind="bar")
-df["Amount"].plot(kind="hist")
+df.plot(x="Customer", y="Amount", kind="barh")
+df["Amount"].plot(kind="hist", bins=20)
 df[["Amount"]].plot(kind="box")
 df.plot(x="Orders", y="Sales", kind="scatter")
+df.plot(x="Month", y=["Revenue", "Cost"], kind="area", alpha=0.4)
+plt.tight_layout()
 plt.show()
+```
+
+## Display formatting
+
+```python
+pd.options.display.float_format = "{:,.2f}".format
+summary["PctOfTotal"] = summary["PctOfTotal"].map("{:.1%}".format)
+summary["Total"] = summary["Total"].map("${:,.2f}".format)
+```
+
+## Common pandas reminders
+
+```python
+# Use parentheses around each condition when filtering with & or |.
+df[(df["Amount"] > 100) & (df["Status"] == "Open")]
+
+# Use .copy() when you intentionally create an independent filtered DataFrame.
+open_orders = df[df["Status"] == "Open"].copy()
+
+# Prefer vectorized operations over row-by-row loops when possible.
+df["Net"] = df["Revenue"] - df["Cost"]
+
+# Use reset_index() after groupby when you want a normal DataFrame.
+summary = df.groupby("Customer")["Amount"].sum().reset_index()
 ```
 
 ---
