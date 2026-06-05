@@ -3019,20 +3019,269 @@ Interpretation:
 - Median columns show typical values when outliers may exist.
 - Order count shows workload or sample size.
 
+## 26.20 Numeric-column statistics only
+
+Many DataFrames contain text, dates, IDs, and numeric measures together. When calculating statistics, choose the numeric columns intentionally.
+
+```python
+numeric_cols = ["Budgeted", "Actual", "Variance"]
+summary = df[numeric_cols].describe()
+```
+
+You can also let pandas select numeric columns:
+
+```python
+numeric_summary = df.select_dtypes(include="number").describe()
+```
+
+Use intentional numeric selection when:
+
+- ID columns are stored as numbers but should not be averaged.
+- Some numeric-looking columns are actually codes.
+- You want the summary to include only business measures.
+
+## 26.21 Missing values in statistics
+
+Most pandas statistics skip missing values by default.
+
+```python
+scores_with_missing = pd.Series([2, 3, None, 4, 20])
+
+scores_with_missing.mean()
+scores_with_missing.count()
+```
+
+Interpretation:
+
+- The mean is calculated from the non-missing values.
+- `count()` reports how many values were actually used.
+- Missing values can make a statistic less reliable if many records are incomplete.
+
+Always check missingness next to important statistics:
+
+```python
+stats_with_missing = pd.DataFrame({
+    "mean": df[["Budgeted", "Actual"]].mean(),
+    "count_used": df[["Budgeted", "Actual"]].count(),
+    "missing_count": df[["Budgeted", "Actual"]].isna().sum(),
+    "missing_pct": df[["Budgeted", "Actual"]].isna().mean() * 100
+})
+```
+
+## 26.22 Sample vs population standard deviation
+
+By default, pandas uses sample standard deviation for `std()` and sample variance for `var()`.
+
+```python
+sample_std = scores.std()
+population_std = scores.std(ddof=0)
+```
+
+Plain-English meaning:
+
+- Use sample standard deviation when your data is a sample used to estimate a larger group.
+- Use population standard deviation when your data contains every record you care about.
+- For large datasets, the difference is often small.
+- For small datasets, the difference can be noticeable.
+
+## 26.23 Percentages and proportions
+
+A proportion is a part divided by a whole. A percentage is a proportion multiplied by 100.
+
+```python
+status_counts = df["Status"].value_counts(dropna=False)
+status_proportions = df["Status"].value_counts(normalize=True, dropna=False)
+status_percentages = status_proportions * 100
+```
+
+Interpretation:
+
+- `0.25` as a proportion means one quarter of the records.
+- `25%` as a percentage means the same thing in a reader-friendly format.
+- `dropna=False` includes missing status values in the denominator.
+
+## 26.24 Cross-tabulation
+
+A cross-tabulation counts how two categorical columns combine.
+
+```python
+pd.crosstab(df["Region"], df["Status"])
+```
+
+Add row percentages:
+
+```python
+pd.crosstab(df["Region"], df["Status"], normalize="index") * 100
+```
+
+Interpretation:
+
+- Counts answer: how many records are in each combination?
+- Row percentages answer: within each row group, what share belongs to each category?
+- Cross-tabs are useful for comparing status mix, issue mix, or category mix across groups.
+
+## 26.25 Weighted averages
+
+A regular mean treats every row equally. A weighted average gives more importance to rows with larger weights.
+
+Example: average price per unit sold.
+
+```python
+weighted_average_price = (df["Price"] * df["Units"]).sum() / df["Units"].sum()
+```
+
+Use weighted averages when:
+
+- Rows represent different quantities.
+- Some records should count more than others.
+- You want an average per unit, dollar, hour, or other weight.
+
+Avoid weighted averages when the weight column has missing, zero, or negative values unless those values are expected and handled intentionally.
+
+## 26.26 Coefficient of variation
+
+Coefficient of variation compares standard deviation to the mean.
+
+```python
+cv = df["Actual"].std() / df["Actual"].mean()
+```
+
+Interpretation:
+
+- Higher coefficient of variation means more relative variation.
+- Lower coefficient of variation means more consistency relative to the average.
+- It can help compare spread between groups with different average sizes.
+
+Example grouped calculation:
+
+```python
+variation_by_region = df.groupby("Region").agg(
+    Average_Actual=("Actual", "mean"),
+    Std_Actual=("Actual", "std")
+)
+
+variation_by_region["CV_Actual"] = (
+    variation_by_region["Std_Actual"] / variation_by_region["Average_Actual"]
+)
+```
+
+## 26.27 Ranking and top-N analysis
+
+Ranking helps find the largest, smallest, best, worst, fastest, or slowest records.
+
+```python
+top_orders = df.nlargest(10, "Actual")
+bottom_orders = df.nsmallest(10, "Actual")
+```
+
+For grouped top-N analysis:
+
+```python
+top_customers = (
+    df.groupby("Customer", as_index=False)
+      .agg(Total_Actual=("Actual", "sum"), Order_Count=("Order", "count"))
+      .sort_values("Total_Actual", ascending=False)
+      .head(10)
+)
+```
+
+Interpretation:
+
+- Top-N lists are useful for prioritizing review work.
+- Always show the measure used for ranking.
+- Include counts when ranking grouped summaries so small groups do not look more important than they are.
+
+## 26.28 A compact statistics report
+
+A practical report often combines totals, typical values, spread, and missingness.
+
+```python
+report = df.groupby("Region").agg(
+    Records=("Order", "count"),
+    Total_Actual=("Actual", "sum"),
+    Average_Actual=("Actual", "mean"),
+    Median_Actual=("Actual", "median"),
+    Std_Actual=("Actual", "std"),
+    P90_Actual=("Actual", lambda s: s.quantile(0.90)),
+    Missing_Actual=("Actual", lambda s: s.isna().sum())
+).reset_index()
+```
+
+This report supports several questions at once:
+
+- Which region has the largest total actual amount?
+- Which region has the highest typical order?
+- Which region has the most variation?
+- Which region has unusually high 90th percentile values?
+- Which region has missing data that may weaken the summary?
+
 ---
 
 # 27. Statistics Interpretation Guide
 
-## 27.1 Mean vs median
+Statistics are tools for answering specific questions. A statistic is useful only when you know:
+
+1. **What question it answers.**
+2. **What data was included.**
+3. **What data was excluded or missing.**
+4. **Whether the result describes totals, typical records, variation, ranking, or relationships.**
+5. **What action or follow-up question the result suggests.**
+
+A good statistical summary should help a reader move from raw data to a decision. It should not be a pile of numbers without context.
+
+## 27.1 The basic statistics decision table
+
+Use this table when deciding which statistic to calculate.
+
+| If you need to know... | Use... | pandas example | Plain-English interpretation |
+|---|---|---|---|
+| How many records exist | Count | `df["Order"].count()` | There are this many non-missing records. |
+| Total volume | Sum | `df["Actual"].sum()` | All records together add up to this amount. |
+| Typical value in balanced data | Mean | `df["Actual"].mean()` | The average record is about this amount. |
+| Typical value with outliers | Median | `df["Actual"].median()` | The middle record is this amount. |
+| Most common category | Mode / value counts | `df["Status"].value_counts()` | This category appears most often. |
+| Lowest and highest values | Min / max | `df["Actual"].min()` | Values run from this low to this high. |
+| Overall spread | Standard deviation | `df["Actual"].std()` | Values are usually this far from the average. |
+| Middle spread | IQR | `q3 - q1` | The middle half of records spans this range. |
+| Thresholds | Percentiles | `df["Actual"].quantile(0.90)` | 90% of records are at or below this value. |
+| Relationship between two numbers | Correlation | `df[["Orders", "Profit"]].corr()` | These two columns tend to move together, apart, or not much at all. |
+| Share of a whole | Percentage | `counts / counts.sum()` | This category represents this share of the total. |
+| Group comparison | Grouped aggregation | `df.groupby("Region")["Actual"].mean()` | Each group has its own summary value. |
+
+## 27.2 Count, missing values, and the denominator
+
+Before interpreting any statistic, check the denominator. The denominator is the number that the statistic is based on.
+
+```python
+row_count = len(df)
+non_missing_actual = df["Actual"].count()
+missing_actual = df["Actual"].isna().sum()
+missing_actual_pct = df["Actual"].isna().mean() * 100
+```
+
+Interpretation:
+
+- `len(df)` counts all rows.
+- `count()` counts only non-missing values in the selected column.
+- `isna().sum()` counts missing values.
+- `isna().mean() * 100` gives the missing percentage.
+
+This matters because an average from 10 complete records is much weaker than an average from 10,000 complete records. It also matters when each column has a different number of missing values.
+
+Useful reporting sentence:
+
+> The average actual amount was `$1,240`, based on 8,415 non-missing records; 3.2% of records were missing actual amount.
+
+## 27.3 Mean vs median
 
 ![Mean vs Median with Outlier](pandas_manual_assets/stats_mean_median_mode.svg)
 
 Mean and median answer different questions.
 
-| Statistic | Question it answers | Best when |
-|---|---|---|
-| Mean | What is the average? | Data is balanced |
-| Median | What is the typical middle value? | Data has outliers or skew |
+| Statistic | Question it answers | Best when | Weakness |
+|---|---|---|---|
+| Mean | What is the arithmetic average? | Data is balanced and totals matter | Pulled by outliers |
+| Median | What is the middle record? | Data has outliers or skew | Ignores the size of extreme values |
 
 Example:
 
@@ -3047,7 +3296,13 @@ The mean is much higher because of `10000`. The median better represents the typ
 
 In order data, this matters because a few very large orders can distort averages.
 
-## 27.2 Mode interpretation
+Practical rule:
+
+- Report the **mean** when the question is about total load spread across records, such as average cost per order.
+- Report the **median** when the question is about the typical record, especially when amounts are skewed.
+- Report **both** when readers need to understand whether outliers are affecting the average.
+
+## 27.4 Mode and value counts interpretation
 
 Mode tells you what appears most often.
 
@@ -3057,9 +3312,24 @@ df["Issue_Type"].mode()
 
 If the mode is `Quantity Issue`, that means it is the most frequently occurring issue type.
 
-Mode is especially useful for categorical data.
+For categories, `value_counts()` is often more useful than `mode()` because it shows the full ranking.
 
-## 27.3 Standard deviation interpretation
+```python
+issue_counts = df["Issue_Type"].value_counts(dropna=False)
+issue_share = df["Issue_Type"].value_counts(normalize=True, dropna=False) * 100
+```
+
+Interpretation:
+
+- Counts show volume.
+- Percentages show share.
+- `dropna=False` keeps missing categories visible.
+
+Useful reporting sentence:
+
+> Quantity Issue was the most common issue type, with 184 records, representing 37.6% of all reviewed issues.
+
+## 27.5 Standard deviation interpretation
 
 Standard deviation tells you consistency.
 
@@ -3077,7 +3347,27 @@ Team A has low standard deviation, meaning results are consistent.
 
 Team B has high standard deviation, meaning results vary a lot.
 
-## 27.4 Percentiles interpretation
+Use standard deviation when:
+
+- You want to describe consistency around the average.
+- The mean is meaningful for the data.
+- You are comparing variation between similar measures.
+
+Be careful when:
+
+- The data is strongly skewed.
+- Outliers dominate the spread.
+- You compare groups with very different averages.
+
+When group averages are very different, the coefficient of variation can help compare relative variation.
+
+```python
+cv = df["Actual"].std() / df["Actual"].mean()
+```
+
+A higher coefficient of variation means more variation relative to the average.
+
+## 27.6 Percentiles interpretation
 
 Percentiles help understand thresholds.
 
@@ -3089,7 +3379,39 @@ df["Sales"].quantile([0.25, 0.50, 0.75, 0.90])
 
 If the 90th percentile is `$5,000`, that means 90% of records are at or below `$5,000`, and 10% are above `$5,000`.
 
-## 27.5 Outlier interpretation
+Percentiles are useful for questions like:
+
+- What amount separates the largest 10% of orders from the rest?
+- What processing time do 95% of records meet?
+- Where should we set a review threshold?
+
+Useful reporting sentence:
+
+> The 95th percentile processing time was 12 days, meaning 95% of records were completed in 12 days or less and 5% took longer.
+
+## 27.7 Quartiles and IQR interpretation
+
+Quartiles divide the data into four parts:
+
+- **Q1:** 25% of values are at or below this point.
+- **Q2:** the median; 50% of values are at or below this point.
+- **Q3:** 75% of values are at or below this point.
+
+The IQR is `Q3 - Q1`. It describes the spread of the middle 50% of records.
+
+```python
+q1 = df["Actual"].quantile(0.25)
+q3 = df["Actual"].quantile(0.75)
+iqr = q3 - q1
+```
+
+Interpretation:
+
+- A small IQR means the middle records are tightly grouped.
+- A large IQR means typical records vary widely.
+- IQR is less affected by extreme outliers than the full range.
+
+## 27.8 Outlier interpretation
 
 ![Box Plot Outliers](pandas_manual_assets/plot_boxplot_quartiles_outliers.svg)
 
@@ -3109,7 +3431,31 @@ Examples of suspicious outliers:
 - Actual amount much higher than budgeted.
 - Unit count extremely high because of data entry error.
 
-## 27.6 Correlation interpretation
+A useful outlier workflow:
+
+```python
+q1 = df["Actual"].quantile(0.25)
+q3 = df["Actual"].quantile(0.75)
+iqr = q3 - q1
+
+lower_bound = q1 - 1.5 * iqr
+upper_bound = q3 + 1.5 * iqr
+
+outliers = df[(df["Actual"] < lower_bound) | (df["Actual"] > upper_bound)]
+```
+
+Then review the outlier rows instead of deleting them automatically.
+
+Questions to ask:
+
+1. Is the value possible?
+2. Is the unit correct?
+3. Is the date in scope?
+4. Is the record a duplicate?
+5. Does the outlier represent a real business exception?
+6. Should the statistic be reported with and without the outlier?
+
+## 27.9 Correlation interpretation
 
 ![Correlation Heatmap](pandas_manual_assets/plot_correlation_heatmap.svg)
 
@@ -3125,18 +3471,237 @@ If correlation is `0.05`, order count does not explain sales amount very well.
 
 If correlation is `-0.80`, as one goes up, the other tends to go down.
 
-## 27.7 Practical interpretation checklist
+Interpret correlation with these cautions:
+
+- Correlation describes a **linear** relationship; curved relationships may be missed.
+- Correlation does not prove that one column causes the other.
+- Outliers can make correlation look stronger or weaker than it really is.
+- A strong relationship may be caused by a third factor not shown in the data.
+- Correlation should usually be checked with a scatter plot.
+
+Useful reporting sentence:
+
+> Orders and profit had a correlation of 0.78, suggesting they usually increase together, but this does not prove that more orders caused higher profit.
+
+## 27.10 Grouped statistics interpretation
+
+Grouped statistics compare summaries across categories.
+
+```python
+summary = df.groupby("Region").agg(
+    Order_Count=("Order", "nunique"),
+    Total_Actual=("Actual", "sum"),
+    Average_Actual=("Actual", "mean"),
+    Median_Actual=("Actual", "median")
+).reset_index()
+```
+
+Interpret grouped results carefully:
+
+- A group with a high total may simply have more records.
+- A group with a high average may have only a few records.
+- A group with a high median is usually high for a typical record.
+- A group with a large gap between mean and median may have outliers or skew.
+
+Good grouped summaries usually include both a measure and a count.
+
+```python
+summary = summary.sort_values("Total_Actual", ascending=False)
+```
+
+Sorting helps readers see the largest groups first.
+
+## 27.11 Percentages, rates, and shares
+
+Percentages need a clear denominator.
+
+```python
+status_counts = df["Status"].value_counts()
+status_pct = df["Status"].value_counts(normalize=True) * 100
+```
+
+For grouped percentages, calculate the denominator inside each group.
+
+```python
+status_by_region = pd.crosstab(
+    df["Region"],
+    df["Status"],
+    normalize="index"
+) * 100
+```
+
+Interpretation:
+
+- `normalize="index"` means each row adds to 100%.
+- This answers: within each region, what percentage belongs to each status?
+
+Do not compare percentages without asking:
+
+1. What is the denominator?
+2. Is the denominator large enough?
+3. Are missing values included or excluded?
+4. Are the groups comparable?
+
+## 27.12 Weighted average interpretation
+
+A regular average treats every row equally. A weighted average gives more influence to rows with larger weights.
+
+Use a weighted average when records do not represent equal importance.
+
+Example:
+
+```python
+weighted_avg_price = (df["Price"] * df["Units"]).sum() / df["Units"].sum()
+```
+
+Interpretation:
+
+- A regular average price answers: what is the average row price?
+- A weighted average price answers: what is the average price per unit sold?
+
+This difference matters when one row represents 1 unit and another row represents 10,000 units.
+
+## 27.13 Sample vs population interpretation
+
+Sometimes your data is the full population. Other times it is a sample.
+
+| Situation | Meaning | pandas default to know |
+|---|---|---|
+| Population | You have every record in scope | `std(ddof=0)` calculates population standard deviation |
+| Sample | You have part of the records and are estimating the whole | `std()` uses sample standard deviation by default |
+
+Example:
+
+```python
+sample_std = df["Actual"].std()
+population_std = df["Actual"].std(ddof=0)
+```
+
+For most business review work, the difference is small when there are many records. It can matter when the dataset is small.
+
+## 27.14 Distribution shape: balanced, skewed, and multimodal
+
+Do not rely only on a table of numbers. The shape of the data changes how statistics should be read.
+
+Common shapes:
+
+| Shape | What it means | What to use |
+|---|---|---|
+| Balanced | Values are fairly even around the center | Mean and standard deviation are often useful |
+| Right-skewed | Most values are low, with a few very high values | Median, percentiles, and IQR are often useful |
+| Left-skewed | Most values are high, with a few very low values | Median, percentiles, and IQR are often useful |
+| Multimodal | There are multiple common clusters | Segment the data into groups before summarizing |
+
+Quick checks:
+
+```python
+df["Actual"].describe()
+df["Actual"].skew()
+df["Actual"].plot(kind="hist", bins=20)
+```
+
+If the histogram has separate clusters, one overall average may hide important group differences.
+
+## 27.15 Practical interpretation checklist
 
 When reading statistics, ask:
 
-1. What is the sample size?
-2. Are there missing values?
-3. Are there outliers?
-4. Is the data skewed?
-5. Is mean or median more appropriate?
-6. Are totals more important than averages?
-7. Are grouped statistics hiding important details?
-8. Does the statistic answer the business question?
+1. What question am I answering?
+2. What is the sample size?
+3. What is the denominator?
+4. Are missing values included, excluded, or reported separately?
+5. Are there outliers?
+6. Is the data skewed?
+7. Is mean or median more appropriate?
+8. Are totals more important than averages?
+9. Are grouped statistics hiding important details?
+10. Are percentages based on comparable groups?
+11. Does correlation need a scatter plot before interpretation?
+12. Does the statistic answer the business question?
+13. What decision, risk, or follow-up action does the statistic suggest?
+
+## 27.16 A practical statistics workflow in pandas
+
+Use this workflow when starting an analysis.
+
+### Step 1: Understand the rows and columns
+
+```python
+df.shape
+df.dtypes
+df.head()
+```
+
+Ask:
+
+- What does one row represent?
+- Which columns are numeric?
+- Which columns are categories?
+- Which columns contain dates?
+
+### Step 2: Check missingness
+
+```python
+missing = df.isna().sum().sort_values(ascending=False)
+missing_pct = df.isna().mean().mul(100).sort_values(ascending=False)
+```
+
+Ask whether missing values are random, expected, or a data-quality problem.
+
+### Step 3: Summarize numeric columns
+
+```python
+numeric_summary = df.describe(percentiles=[0.25, 0.5, 0.75, 0.9, 0.95])
+```
+
+Look for very large gaps between mean and median, unusually high maximums, and suspicious minimums.
+
+### Step 4: Summarize categorical columns
+
+```python
+status_counts = df["Status"].value_counts(dropna=False)
+status_pct = df["Status"].value_counts(normalize=True, dropna=False) * 100
+```
+
+Look for unexpected categories, spelling variations, missing categories, and dominant categories.
+
+### Step 5: Compare groups
+
+```python
+group_summary = df.groupby("Region").agg(
+    Records=("Order", "count"),
+    Total_Actual=("Actual", "sum"),
+    Average_Actual=("Actual", "mean"),
+    Median_Actual=("Actual", "median"),
+    P90_Actual=("Actual", lambda s: s.quantile(0.90))
+).reset_index()
+```
+
+Look for groups with high totals, high typical values, unusually wide spread, or very small record counts.
+
+### Step 6: Check relationships
+
+```python
+relationship = df[["Budgeted", "Actual", "Variance"]].corr()
+```
+
+Use correlation as a clue, then inspect charts and business context.
+
+### Step 7: Write an insight statement
+
+A useful insight statement includes statistic, context, and implication.
+
+Template:
+
+```text
+[Group or measure] had [statistic], based on [count/denominator], which suggests [business meaning or next step].
+```
+
+Example:
+
+```text
+The West region had the highest median actual amount at $1,420, based on 318 orders, which suggests the typical West order is larger than in other regions and should be reviewed separately from total volume.
+```
 
 ---
 
