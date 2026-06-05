@@ -6,53 +6,91 @@
 
 ### [Part I: pandas Fundamentals and Workflow](#part-i-pandas-fundamentals-and-workflow)
 
+**[Subpart I-A: Orientation and Setup](#subpart-i-a-orientation-and-setup)**
+
 1. [How to Use This Manual](#1-how-to-use-this-manual)
 2. [What pandas Is and Why It Matters](#2-what-pandas-is-and-why-it-matters)
 3. [Installation and Setup](#3-installation-and-setup)
 4. [Import Conventions](#4-import-conventions)
+
+**[Subpart I-B: DataFrame Basics](#subpart-i-b-dataframe-basics)**
+
 5. [Core pandas Objects](#5-core-pandas-objects)
 6. [Creating DataFrames](#6-creating-dataframes)
 7. [Reading and Writing Files](#7-reading-and-writing-files)
 8. [Inspecting Data](#8-inspecting-data)
+
+**[Subpart I-C: Selecting, Filtering, and Organizing Data](#subpart-i-c-selecting-filtering-and-organizing-data)**
+
 9. [Selecting Columns and Rows](#9-selecting-columns-and-rows)
 10. [Filtering Data](#10-filtering-data)
 11. [Creating, Updating, and Removing Columns](#11-creating-updating-and-removing-columns)
 12. [Index Basics](#12-index-basics)
 13. [Sorting and Ranking](#13-sorting-and-ranking)
+
+**[Subpart I-D: Cleaning and Type-Specific Operations](#subpart-i-d-cleaning-and-type-specific-operations)**
+
 14. [Handling Missing Data](#14-handling-missing-data)
 15. [Data Types and Type Conversion](#15-data-types-and-type-conversion)
 16. [String/Text Operations](#16-stringtext-operations)
 17. [Date and Time Operations](#17-date-and-time-operations)
+
+**[Subpart I-E: Transformation, Aggregation, and Reshaping](#subpart-i-e-transformation-aggregation-and-reshaping)**
+
 18. [Conditional Logic in pandas](#18-conditional-logic-in-pandas)
 19. [Apply, Map, Replace, and Vectorization](#19-apply-map-replace-and-vectorization)
 20. [Grouping and Aggregation](#20-grouping-and-aggregation)
 21. [Pivot Tables and Cross Tabs](#21-pivot-tables-and-cross-tabs)
 22. [Reshaping Data](#22-reshaping-data)
+
+**[Subpart I-F: Combining, Quality Checks, and Excel Outputs](#subpart-i-f-combining-quality-checks-and-excel-outputs)**
+
 23. [Combining DataFrames](#23-combining-dataframes)
 24. [Duplicates and Data Quality Checks](#24-duplicates-and-data-quality-checks)
 25. [Working with Excel Reports](#25-working-with-excel-reports)
 
 ### [Part II: Statistics](#part-ii-statistics)
 
+**[Subpart II-A: Calculating Statistics](#subpart-ii-a-calculating-statistics)**
+
 26. [Basic Statistics with pandas](#26-basic-statistics-with-pandas)
+
+**[Subpart II-B: Interpreting Statistics](#subpart-ii-b-interpreting-statistics)**
+
 27. [Statistics Interpretation Guide](#27-statistics-interpretation-guide)
 
 ### [Part III: Charts and Plots](#part-iii-charts-and-plots)
 
+**[Subpart III-A: Chart Foundations for Statistics](#subpart-iii-a-chart-foundations-for-statistics)**
+
 28. [Charts for Understanding Statistics](#28-charts-for-understanding-statistics)
+
+**[Subpart III-B: Creating Plots](#subpart-iii-b-creating-plots)**
+
 29. [Plotting with pandas and Matplotlib](#29-plotting-with-pandas-and-matplotlib)
+
+**[Subpart III-C: Reading Plot Types](#subpart-iii-c-reading-plot-types)**
+
 30. [How to Read Common Plot Types](#30-how-to-read-common-plot-types)
 
 ### [Part IV: Applied pandas and Reference](#part-iv-applied-pandas-and-reference)
 
+**[Subpart IV-A: Applied Workflows and Performance](#subpart-iv-a-applied-workflows-and-performance)**
+
 31. [Practical Orders and Inventory Example](#31-practical-orders-and-inventory-example)
 32. [Method Chaining](#32-method-chaining)
 33. [Performance Tips](#33-performance-tips)
+
+**[Subpart IV-B: Advanced pandas Operations](#subpart-iv-b-advanced-pandas-operations)**
+
 34. [Additional pandas Operations](#34-additional-pandas-operations)
 35. [MultiIndex and Hierarchical Data](#35-multiindex-and-hierarchical-data)
 36. [Cumulative, Rolling, and Window Calculations](#36-cumulative-rolling-and-window-calculations)
 37. [Binning, Bucketing, and Segmentation](#37-binning-bucketing-and-segmentation)
 38. [Working with Many Files and JSON](#38-working-with-many-files-and-json)
+
+**[Subpart IV-C: SQL, Reporting, Troubleshooting, and Reference](#subpart-iv-c-sql-reporting-troubleshooting-and-reference)**
+
 39. [SQL for pandas and Python Data Work](#39-sql-for-pandas-and-python-data-work)
 40. [Styling Tables and Creating Review Outputs](#40-styling-tables-and-creating-review-outputs)
 41. [Common Errors and How to Fix Them](#41-common-errors-and-how-to-fix-them)
@@ -66,6 +104,8 @@
 This part covers the core pandas workflow: creating tables, reading files, inspecting data, filtering rows, creating columns, grouping, reshaping, merging, cleaning, and exporting reports.
 
 ---
+
+# Subpart I-A: Orientation and Setup
 
 # 1. How to Use This Manual
 
@@ -81,7 +121,7 @@ Each important pandas topic includes:
 
 You can read it from top to bottom, or you can jump directly to the section you need.
 
-The manual is split into major parts so pandas skills, statistics concepts, charts/plots, SQL workflows, and applied reference material are easy to find separately.
+The manual is split into major parts and subparts so pandas skills, statistics concepts, charts/plots, SQL workflows, and applied reference material are easy to find separately.
 
 The examples use small datasets so the logic is easy to understand. In real work, the same code patterns apply to large Excel files, CSV reports, order reports, audit logs, productivity reports, and automation outputs.
 
@@ -243,6 +283,8 @@ plt.show()
 ```
 
 ---
+
+# Subpart I-B: DataFrame Basics
 
 # 5. Core pandas Objects
 
@@ -755,6 +797,8 @@ df["Status"].value_counts(normalize=True)
 ```
 
 ---
+
+# Subpart I-C: Selecting, Filtering, and Organizing Data
 
 # 9. Selecting Columns and Rows
 
@@ -1387,6 +1431,8 @@ Dense ranking does not skip numbers after ties.
 
 ---
 
+# Subpart I-D: Cleaning and Type-Specific Operations
+
 # 14. Handling Missing Data
 
 Missing data is common in real reports. The examples in this section use this small DataFrame:
@@ -1768,6 +1814,8 @@ monthly.index = monthly.index.to_timestamp()
 ```
 
 ---
+
+# Subpart I-E: Transformation, Aggregation, and Reshaping
 
 # 18. Conditional Logic in pandas
 
@@ -2292,6 +2340,8 @@ long_summary = wide_summary.stack()
 
 ---
 
+# Subpart I-F: Combining, Quality Checks, and Excel Outputs
+
 # 23. Combining DataFrames
 
 There are three common ways to combine DataFrames:
@@ -2646,6 +2696,8 @@ df["Actual"] = pd.to_numeric(df["Actual"], errors="coerce")
 This part separates the statistical concepts from the pandas workflow. It explains what common statistics mean, how to calculate them with pandas, and how to interpret them in practical review work.
 
 ---
+
+# Subpart II-A: Calculating Statistics
 
 # 26. Basic Statistics with pandas
 
@@ -3213,6 +3265,8 @@ This report supports several questions at once:
 
 ---
 
+# Subpart II-B: Interpreting Statistics
+
 # 27. Statistics Interpretation Guide
 
 Statistics are tools for answering specific questions. A statistic is useful only when you know:
@@ -3707,6 +3761,8 @@ This part focuses on visual analysis. It separates chart-reading skills from the
 
 ---
 
+# Subpart III-A: Chart Foundations for Statistics
+
 # 28. Charts for Understanding Statistics
 
 ## 28.1 Mean, median, and mode chart
@@ -3918,6 +3974,8 @@ There were 18 late orders in May, representing 6.4% of May orders.
 That sentence may be clearer than a chart if no comparison is needed.
 
 ---
+
+# Subpart III-B: Creating Plots
 
 # 29. Plotting with pandas and Matplotlib
 
@@ -4662,6 +4720,8 @@ summary.to_excel("top_customers_actual_amount_summary.xlsx", index=False)
 
 ---
 
+# Subpart III-C: Reading Plot Types
+
 # 30. How to Read Common Plot Types
 
 ## 30.1 Line plot
@@ -5236,6 +5296,8 @@ This part returns to pandas for applied workflows, advanced operations, performa
 
 ---
 
+# Subpart IV-A: Applied Workflows and Performance
+
 # 31. Practical Orders and Inventory Example
 
 This example uses generic order and inventory data. It is not real customer data.
@@ -5450,6 +5512,8 @@ final = pd.concat(results).groupby(level=0).sum()
 
 ---
 
+
+# Subpart IV-B: Advanced pandas Operations
 
 # 34. Additional pandas Operations
 
@@ -6062,6 +6126,8 @@ error_report = pd.DataFrame(errors)
 This is useful in automation because one bad file should not always stop the whole process.
 
 ---
+
+# Subpart IV-C: SQL, Reporting, Troubleshooting, and Reference
 
 # 39. SQL for pandas and Python Data Work
 
