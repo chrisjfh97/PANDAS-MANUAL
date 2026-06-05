@@ -9,6 +9,8 @@
 
 ## Table of Contents
 
+### [Part I: pandas Fundamentals and Workflow](#part-i-pandas-fundamentals-and-workflow)
+
 1. [How to Use This Manual](#1-how-to-use-this-manual)
 2. [What pandas Is and Why It Matters](#2-what-pandas-is-and-why-it-matters)
 3. [Installation and Setup](#3-installation-and-setup)
@@ -34,11 +36,20 @@
 23. [Combining DataFrames](#23-combining-dataframes)
 24. [Duplicates and Data Quality Checks](#24-duplicates-and-data-quality-checks)
 25. [Working with Excel Reports](#25-working-with-excel-reports)
+
+### [Part II: Statistics](#part-ii-statistics)
+
 26. [Basic Statistics with pandas](#26-basic-statistics-with-pandas)
 27. [Statistics Interpretation Guide](#27-statistics-interpretation-guide)
+
+### [Part III: Charts and Plots](#part-iii-charts-and-plots)
+
 28. [Charts for Understanding Statistics](#28-charts-for-understanding-statistics)
 29. [Plotting with pandas and Matplotlib](#29-plotting-with-pandas-and-matplotlib)
 30. [How to Read Common Plot Types](#30-how-to-read-common-plot-types)
+
+### [Part IV: Applied pandas and Reference](#part-iv-applied-pandas-and-reference)
+
 31. [Practical Orders and Inventory Example](#31-practical-orders-and-inventory-example)
 32. [Method Chaining](#32-method-chaining)
 33. [Performance Tips](#33-performance-tips)
@@ -51,6 +62,12 @@
 40. [Common Errors and How to Fix Them](#40-common-errors-and-how-to-fix-them)
 41. [Mini Cheat Sheet](#41-mini-cheat-sheet)
 42. [References](#42-references)
+
+---
+
+# Part I: pandas Fundamentals and Workflow
+
+This part covers the core pandas workflow: creating tables, reading files, inspecting data, filtering rows, creating columns, grouping, reshaping, merging, cleaning, and exporting reports.
 
 ---
 
@@ -67,6 +84,8 @@ Each important pandas topic includes:
 - Common mistakes to avoid.
 
 You can read it from top to bottom, or you can jump directly to the section you need.
+
+The manual is split into four major parts so pandas skills, statistics concepts, charts/plots, and applied reference material are easy to find separately.
 
 The examples use small datasets so the logic is easy to understand. In real work, the same code patterns apply to large Excel files, CSV reports, order reports, audit logs, productivity reports, and automation outputs.
 
@@ -1866,6 +1885,12 @@ df["Actual"] = pd.to_numeric(df["Actual"], errors="coerce")
 
 ---
 
+# Part II: Statistics
+
+This part separates the statistical concepts from the pandas workflow. It explains what common statistics mean, how to calculate them with pandas, and how to interpret them in practical review work.
+
+---
+
 # 26. Basic Statistics with pandas
 
 Statistics help summarize and understand data. pandas has many built-in methods for statistics.
@@ -2338,6 +2363,12 @@ When reading statistics, ask:
 6. Are totals more important than averages?
 7. Are grouped statistics hiding important details?
 8. Does the statistic answer the business question?
+
+---
+
+# Part III: Charts and Plots
+
+This part focuses on visual analysis. It separates chart-reading skills from the statistics chapter and shows how to create, read, and explain common plot types.
 
 ---
 
@@ -3524,6 +3555,12 @@ Interpretation:
 - `Over_Budget_Orders` shows whether many orders are affected.
 - `Over_Budget_Rate` shows whether over-budget records are common for that customer.
 - A customer with one very large over-budget order may need a different response than a customer with many smaller over-budget orders.
+
+---
+
+# Part IV: Applied pandas and Reference
+
+This part returns to pandas for applied workflows, advanced operations, performance tips, reporting patterns, troubleshooting, and quick reference material.
 
 ---
 
