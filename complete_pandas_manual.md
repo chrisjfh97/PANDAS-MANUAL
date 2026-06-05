@@ -13,7 +13,7 @@
       - [3.1 Install pandas](#31-install-pandas)
       - [3.2 Verify installation](#32-verify-installation)
       - [3.3 Recommended imports](#33-recommended-imports)
-    - [4. Import Conventions](#4-import-conventions)
+    - [4. Import Conventions Explained](#4-import-conventions-explained)
   - [Subpart I-B: DataFrame Basics](#subpart-i-b-dataframe-basics)
     - [5. Core pandas Objects](#5-core-pandas-objects)
       - [5.1 Series](#51-series)
@@ -54,6 +54,7 @@
       - [9.3 Select rows by position with `iloc`](#93-select-rows-by-position-with-iloc)
       - [9.4 Select rows/columns by label with `loc`](#94-select-rowscolumns-by-label-with-loc)
       - [9.5 `loc` vs `iloc`](#95-loc-vs-iloc)
+      - [9.6 Filter columns by name with `filter`](#96-filter-columns-by-name-with-filter)
     - [10. Filtering Data](#10-filtering-data)
       - [10.1 Basic filter](#101-basic-filter)
       - [10.2 Multiple conditions with AND](#102-multiple-conditions-with-and)
@@ -92,6 +93,7 @@
       - [14.4 Fill with mean or median](#144-fill-with-mean-or-median)
       - [14.5 Drop rows with missing values](#145-drop-rows-with-missing-values)
       - [14.6 Drop columns with too many missing values](#146-drop-columns-with-too-many-missing-values)
+      - [14.7 `pd.NA` vs `np.nan` vs `None`](#147-pdna-vs-npnan-vs-none)
     - [15. Data Types and Type Conversion](#15-data-types-and-type-conversion)
       - [15.1 Check data types](#151-check-data-types)
       - [15.2 Convert to numeric](#152-convert-to-numeric)
@@ -128,7 +130,7 @@
       - [19.5 `apply` on rows](#195-apply-on-rows)
       - [19.6 Lambda functions in pandas examples](#196-lambda-functions-in-pandas-examples)
       - [19.7 When to use each](#197-when-to-use-each)
-      - [19.7 When a loop is the right choice](#197-when-a-loop-is-the-right-choice)
+      - [19.8 When a loop is the right choice](#198-when-a-loop-is-the-right-choice)
     - [20. Grouping and Aggregation](#20-grouping-and-aggregation)
       - [20.1 Group by one column](#201-group-by-one-column)
       - [20.2 Group by multiple columns](#202-group-by-multiple-columns)
@@ -431,6 +433,10 @@
       - [41.5 Merge creates too many rows](#415-merge-creates-too-many-rows)
       - [41.6 Missing values after merge](#416-missing-values-after-merge)
       - [41.7 Wrong totals after filtering](#417-wrong-totals-after-filtering)
+      - [41.8 ValueError: cannot convert float NaN to integer](#418-valueerror-cannot-convert-float-nan-to-integer)
+      - [41.9 MergeError when join key types do not match](#419-mergeerror-when-join-key-types-do-not-match)
+      - [41.10 AttributeError: DataFrame object has no attribute iteritems](#4110-attributeerror-dataframe-object-has-no-attribute-iteritems)
+      - [41.11 Index confusion after groupby](#4111-index-confusion-after-groupby)
   - [Subpart IV-E: Quick Reference](#subpart-iv-e-quick-reference)
     - [42. Mini Cheat Sheet](#42-mini-cheat-sheet)
       - [Imports and setup](#imports-and-setup)
@@ -598,19 +604,21 @@ If this prints a version number, pandas is installed correctly.
 
 ## 3.3 Recommended imports
 
+Copy this block near the top of notebooks or scripts used with this manual:
+
 ```python
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 ```
 
-`pd`, `np`, and `plt` are standard aliases used by most pandas examples and documentation.
+This section is only the quick setup checklist. Section 4 explains what each alias means and when you actually need each import.
 
 ---
 
-# 4. Import Conventions
+# 4. Import Conventions Explained
 
-The standard import convention is:
+The standard pandas import convention is:
 
 ```python
 import pandas as pd
@@ -634,11 +642,15 @@ NumPy is useful for numerical operations and conditional logic:
 df["Status"] = np.where(df["Score"] >= 90, "Excellent", "Normal")
 ```
 
+Use NumPy when you need helpers such as `np.where`, `np.select`, `np.nan`, or numerical functions. You do not need to import NumPy for every pandas task.
+
 For plotting:
 
 ```python
 import matplotlib.pyplot as plt
 ```
+
+Use Matplotlib when you display or customize charts. You do not need `plt` for plain cleaning, filtering, grouping, or Excel export tasks.
 
 Example:
 
@@ -646,6 +658,8 @@ Example:
 df["Score"].plot(kind="bar")
 plt.show()
 ```
+
+In short: Section 3.3 gives the standard copy/paste imports; this section explains the aliases so the imports do not feel like repeated magic.
 
 ---
 
@@ -1390,6 +1404,22 @@ Use `iloc` when you know positions.
 df.iloc[:, 0:3]
 ```
 
+## 9.6 Filter columns by name with `filter`
+
+`df.filter()` selects rows or columns by label. The most common beginner use is selecting columns whose names share a word or pattern.
+
+```python
+amount_columns = df.filter(like="Amount")
+```
+
+Use `regex` for several possible name patterns:
+
+```python
+financial_columns = df.filter(regex="Amount|Revenue")
+```
+
+This is different from row filtering in Section 10. `df.filter(like="Amount")` searches labels, not the values inside the cells.
+
 ---
 
 # 10. Filtering Data
@@ -2058,6 +2088,30 @@ This keeps columns that have at least 70% non-missing values.
 
 A quick memory trick: rows are axis `0`, columns are axis `1`.
 
+## 14.7 `pd.NA` vs `np.nan` vs `None`
+
+pandas can display missing values in several ways. They all mean "missing" to `isna()`, but they are not identical.
+
+| Missing marker | Common source | Important behavior |
+|---|---|---|
+| `np.nan` | Numeric columns and many older examples | A floating-point missing value; integer columns with `np.nan` often become `float64`. |
+| `None` | Regular Python objects, manual data entry, object/string columns | Python's general-purpose missing object; pandas usually treats it as missing. |
+| `pd.NA` | pandas nullable dtypes such as `Int64`, `string`, and `boolean` | pandas' newer missing value marker designed to work with nullable non-float dtypes. |
+
+The practical difference matters when you need integers that can still contain missing values:
+
+```python
+s = pd.Series([1, None, 3], dtype="Int64")
+```
+
+This keeps an integer-style nullable dtype instead of forcing the column to become floating point. Use nullable dtypes such as `Int64`, `string`, and `boolean` when missing values are valid but the column should still behave like integers, text, or booleans.
+
+```python
+df["Quantity"] = pd.to_numeric(df["Quantity"], errors="coerce").astype("Int64")
+```
+
+Beginner rule: use `isna()` and `notna()` to detect missing values instead of comparing directly to `np.nan`, `None`, or `pd.NA`.
+
 ---
 
 # 15. Data Types and Type Conversion
@@ -2445,6 +2499,8 @@ def classify_variance(value):
 df["Category"] = df["Variance"].apply(classify_variance)
 ```
 
+Performance note: `apply` calls Python code repeatedly, so it is usually slower than vectorized pandas, `np.where`, `np.select`, `map`, or `replace`. Use it when the logic is truly custom or hard to express column-wise.
+
 ## 19.5 `apply` on rows
 
 ```python
@@ -2457,7 +2513,7 @@ df["Note"] = df.apply(create_note, axis=1)
 
 `axis=1` tells `apply` to send one row at a time into the function. Without `axis=1`, pandas applies the function column-by-column (`axis=0`).
 
-Row-wise `apply` is flexible but slower than vectorized logic.
+Row-wise `apply` is flexible but often much slower than vectorized logic because pandas has to build and pass one row at a time into Python. Before using `apply(axis=1)`, check whether normal column math, `np.where`, `np.select`, `map`, or `replace` can do the same job.
 
 ## 19.6 Lambda functions in pandas examples
 
@@ -2489,7 +2545,7 @@ Read `lambda row: row["Budgeted"] - row["Actual"]` as "for each row, return Budg
 | Custom row-based text | `apply(axis=1)` |
 | Complex function per value | `apply` |
 
-## 19.7 When a loop is the right choice
+## 19.8 When a loop is the right choice
 
 A common beginner rule is: **avoid loops over DataFrame rows when pandas already has a column-based operation for the task**. That rule is useful, but it does not mean loops are always wrong. It means you should know why you are using one.
 
@@ -3807,6 +3863,8 @@ This part separates the statistical concepts from the pandas workflow. It explai
 
 Statistics help summarize and understand data. pandas has many built-in methods for statistics.
 
+This section is calculation-focused: it shows the pandas method to run and gives a short interpretation note so the output is not floating without context. Section 27 is the meaning-focused guide for choosing between statistics, writing conclusions, and avoiding over-interpretation.
+
 Example dataset:
 
 ```python
@@ -4372,6 +4430,8 @@ This report supports several questions at once:
 # Subpart II-B: Interpreting Statistics
 
 # 27. Statistics Interpretation Guide
+
+Section 26 showed how to calculate statistics in pandas. This section is not another method catalog; it is a decision and communication guide. Use it when you need to choose the right statistic, explain the result in business language, or decide whether a statistic is trustworthy.
 
 Statistics are tools for answering specific questions. A statistic is useful only when you know:
 
@@ -5104,6 +5164,13 @@ df = pd.DataFrame({
 
 df["Profit"] = df["Revenue"] - df["Cost"]
 ```
+
+Before the chart examples, know the two Matplotlib objects you will see repeatedly:
+
+- `fig` means **figure**: the whole image or page that will be shown or saved.
+- `ax` means **axes**: the actual plotting area that has x-values, y-values, labels, bars, lines, or points.
+
+When you write `fig, ax = plt.subplots()`, Matplotlib creates both objects at once. You customize the plot through `ax` (`ax.set_title(...)`, `ax.set_ylabel(...)`) and save or colorbar the whole image through `fig` (`fig.savefig(...)`, `fig.colorbar(...)`). pandas plotting methods usually return an `ax`, so this pattern connects pandas charts to Matplotlib customization.
 
 ## 29.1 Line plot
 
@@ -8130,6 +8197,8 @@ Or update original DataFrame:
 df.loc[df["Variance"] > 0, "Status"] = "Under Budget"
 ```
 
+pandas 2.x note: pandas introduced Copy-on-Write behavior as a modern way to make view-versus-copy behavior safer and more predictable. Depending on your pandas version and Copy-on-Write settings, you may see fewer `SettingWithCopyWarning` messages than older tutorials show. The safe habits still apply: use `.loc` when changing the original DataFrame, and use `.copy()` when you intentionally want an independent filtered DataFrame.
+
 ## 41.4 Dates not working
 
 Fix:
@@ -8184,6 +8253,86 @@ print(filtered["Status"].value_counts(dropna=False))
 
 Always verify row counts before and after major transformations.
 
+## 41.8 ValueError: cannot convert float NaN to integer
+
+Common problem:
+
+```python
+df["Quantity"] = df["Quantity"].astype(int)
+```
+
+This fails when `Quantity` contains missing values because regular NumPy-style integer dtypes cannot store `NaN`.
+
+Fix with a nullable integer dtype:
+
+```python
+df["Quantity"] = pd.to_numeric(df["Quantity"], errors="coerce").astype("Int64")
+```
+
+Use regular `int` only after you have filled or removed missing values intentionally.
+
+## 41.9 MergeError when join key types do not match
+
+Common problem:
+
+```text
+You are trying to merge on object and int64 columns
+```
+
+This means the join key is text in one DataFrame and numeric in the other. Make the key types match before merging. IDs, ZIP codes, and account numbers are often safest as strings.
+
+```python
+left["Customer_ID"] = left["Customer_ID"].astype("string").str.strip()
+right["Customer_ID"] = right["Customer_ID"].astype("string").str.strip()
+
+merged = left.merge(right, on="Customer_ID", how="left")
+```
+
+Do not convert ID columns to numbers if leading zeros matter.
+
+## 41.10 AttributeError: DataFrame object has no attribute iteritems
+
+In pandas 2.0, `DataFrame.iteritems()` was removed. Use `.items()` instead.
+
+Old pattern:
+
+```python
+for name, series in df.iteritems():
+    print(name, series.dtype)
+```
+
+Current pattern:
+
+```python
+for name, series in df.items():
+    print(name, series.dtype)
+```
+
+If this error comes from a third-party package, upgrade that package or check whether it supports pandas 2.x.
+
+## 41.11 Index confusion after groupby
+
+Common problem: a grouped result uses the group key as the index, then later code expects it to be a normal column.
+
+```python
+summary = df.groupby("Customer")["Amount"].sum()
+summary["Customer"]
+```
+
+Fix by keeping group keys as columns:
+
+```python
+summary = df.groupby("Customer", as_index=False)["Amount"].sum()
+```
+
+Or reset the index after aggregation:
+
+```python
+summary = df.groupby("Customer")["Amount"].sum().reset_index()
+```
+
+Beginner rule: use `as_index=False` when you plan to merge, export, or keep working with the grouped result as a normal table.
+
 ---
 
 # Subpart IV-E: Quick Reference
@@ -8235,7 +8384,7 @@ df.to_parquet("output.parquet", index=False)
 ```python
 df.head()
 df.tail()
-df.sample(5, random_state=1)
+df.sample(5, random_state=1)  # see Sections 34.7 and 34.8
 df.shape
 df.info()
 df.describe()
@@ -8254,8 +8403,8 @@ df.memory_usage(deep=True)
 # Columns
 df["Column"]
 df[["Col1", "Col2"]]
-df.filter(like="Amount")
-df.filter(regex="Amount|Revenue")
+df.filter(like="Amount")  # see Section 9.6
+df.filter(regex="Amount|Revenue")  # see Section 9.6
 
 # Label-based selection
 df.loc[:, ["Customer", "Amount"]]
