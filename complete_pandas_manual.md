@@ -1,8 +1,8 @@
 # Complete pandas Manual: Practical Data Analysis, Statistics, and Plotting
 
-**Author:** Generated for Chris Fonseca  
-**Format:** Markdown manual with linked image assets  
-**Main libraries:** `pandas`, `numpy`, `matplotlib`  
+**Author:** Generated for Chris Fonseca
+**Format:** Markdown manual with linked image assets
+**Main libraries:** `pandas`, `numpy`, `matplotlib`
 **Recommended use:** Open this `.md` file in VS Code, GitHub, Obsidian, or any Markdown viewer. Keep the `pandas_manual_assets` folder next to this file so images load correctly.
 
 ---
@@ -321,10 +321,22 @@ A single bracket with one column returns a Series:
 type(df["Orders"])
 ```
 
+Output:
+
+```text
+pandas.core.series.Series
+```
+
 A double bracket returns a DataFrame:
 
 ```python
 type(df[["Orders"]])
+```
+
+Output:
+
+```text
+pandas.core.frame.DataFrame
 ```
 
 This matters because Series and DataFrames have different shapes and sometimes behave differently.
@@ -343,6 +355,16 @@ df = pd.DataFrame({
     "Budgeted": [100, 200, 300],
     "Actual": [90, 210, 250]
 })
+print(df)
+```
+
+Output:
+
+```text
+  Order  Budgeted  Actual
+0  C001       100      90
+1  C002       200     210
+2  C003       300     250
 ```
 
 Each dictionary key becomes a column name.
@@ -359,6 +381,16 @@ records = [
 ]
 
 df = pd.DataFrame(records)
+print(df)
+```
+
+Output:
+
+```text
+  Order  Budgeted  Actual
+0  C001       100      90
+1  C002       200     210
+2  C003       300     250
 ```
 
 This format is common when processing API responses or parsed JSON.
@@ -375,6 +407,16 @@ data = [
 columns = ["Order", "Budgeted", "Actual"]
 
 df = pd.DataFrame(data, columns=columns)
+print(df)
+```
+
+Output:
+
+```text
+  Order  Budgeted  Actual
+0  C001       100      90
+1  C002       200     210
+2  C003       300     250
 ```
 
 This is useful when data is already arranged like rows.
@@ -383,6 +425,15 @@ This is useful when data is already arranged like rows.
 
 ```python
 df = pd.DataFrame(columns=["Order", "Budgeted", "Actual"])
+print(df)
+```
+
+Output:
+
+```text
+Empty DataFrame
+Columns: [Order, Budgeted, Actual]
+Index: []
 ```
 
 This is sometimes used when collecting rows in a loop. However, repeatedly appending rows to a DataFrame is inefficient. Usually, it is better to collect dictionaries in a list and convert to a DataFrame once.
@@ -396,6 +447,16 @@ for order in ["C001", "C002", "C003"]:
     rows.append({"Order": order})
 
 df = pd.DataFrame(rows)
+print(df)
+```
+
+Output:
+
+```text
+  Order
+0  C001
+1  C002
+2  C003
 ```
 
 ---
@@ -501,12 +562,32 @@ This tells pandas that row 2 in Excel should be used as the header row, because 
 
 # 8. Inspecting Data
 
-Before cleaning or analyzing a file, inspect it.
+Before cleaning or analyzing a file, inspect it. The examples in this section use this sample table so the outputs are concrete:
+
+```python
+df = pd.DataFrame({
+    "Order": ["C001", "C002", "C003", "C004", "C005", "C006"],
+    "Status": ["Open", "Closed", "Open", "Pending", "Closed", "Open"],
+    "Budgeted": [100, 200, 300, 400, 500, 600],
+    "Actual": [90, 210, 250, 400, 525, 580]
+})
+```
 
 ## 8.1 First rows
 
 ```python
 df.head()
+```
+
+Output:
+
+```text
+  Order   Status  Budgeted  Actual
+0  C001     Open       100      90
+1  C002   Closed       200     210
+2  C003     Open       300     250
+3  C004  Pending       400     400
+4  C005   Closed       500     525
 ```
 
 Shows the first 5 rows.
@@ -531,6 +612,12 @@ Shows the last 5 rows.
 df.shape
 ```
 
+Output:
+
+```text
+(6, 4)
+```
+
 Returns:
 
 ```text
@@ -544,10 +631,22 @@ rows, columns = df.shape
 print(f"Rows: {rows}, Columns: {columns}")
 ```
 
+Output:
+
+```text
+Rows: 6, Columns: 4
+```
+
 ## 8.4 Column names
 
 ```python
 df.columns
+```
+
+Output:
+
+```text
+Index(['Order', 'Status', 'Budgeted', 'Actual'], dtype='object')
 ```
 
 Convert columns to a list:
@@ -607,6 +706,12 @@ df.describe(include="all")
 df["Status"].unique()
 ```
 
+Output:
+
+```text
+array(['Open', 'Closed', 'Pending'], dtype=object)
+```
+
 Number of unique values:
 
 ```python
@@ -617,6 +722,16 @@ df["Status"].nunique()
 
 ```python
 df["Status"].value_counts()
+```
+
+Output:
+
+```text
+Status
+Open       3
+Closed     2
+Pending    1
+Name: count, dtype: int64
 ```
 
 Include missing values:
@@ -641,12 +756,36 @@ df["Status"].value_counts(normalize=True)
 df["Actual"]
 ```
 
+Output:
+
+```text
+0     90
+1    210
+2    250
+3    400
+4    525
+5    580
+Name: Actual, dtype: int64
+```
+
 This returns a Series.
 
 ## 9.2 Select multiple columns
 
 ```python
 df[["Order", "Budgeted", "Actual"]]
+```
+
+Output:
+
+```text
+  Order  Budgeted  Actual
+0  C001       100      90
+1  C002       200     210
+2  C003       300     250
+3  C004       400     400
+4  C005       500     525
+5  C006       600     580
 ```
 
 This returns a DataFrame.
@@ -657,6 +796,16 @@ This returns a DataFrame.
 
 ```python
 df.iloc[0]
+```
+
+Output:
+
+```text
+Order       C001
+Status      Open
+Budgeted     100
+Actual        90
+Name: 0, dtype: object
 ```
 
 First row.
@@ -671,6 +820,12 @@ First five rows.
 df.iloc[0, 2]
 ```
 
+Output:
+
+```text
+100
+```
+
 Value at first row, third column.
 
 ## 9.4 Select rows/columns by label with `loc`
@@ -679,6 +834,12 @@ Value at first row, third column.
 
 ```python
 df.loc[0, "Actual"]
+```
+
+Output:
+
+```text
+90
 ```
 
 Row index `0`, column `Actual`.
@@ -724,12 +885,32 @@ df = pd.DataFrame({
     "Actual": [90, 210, 250, 400],
     "Status": ["Under Budget", "Over Budget", "Under Budget", "On Budget"]
 })
+print(df)
+```
+
+Output:
+
+```text
+  Order  Budgeted  Actual        Status
+0  C001       100      90  Under Budget
+1  C002       200     210   Over Budget
+2  C003       300     250  Under Budget
+3  C004       400     400     On Budget
 ```
 
 ## 10.1 Basic filter
 
 ```python
 under_budget = df[df["Actual"] < df["Budgeted"]]
+print(under_budget)
+```
+
+Output:
+
+```text
+  Order  Budgeted  Actual        Status
+0  C001       100      90  Under Budget
+2  C003       300     250  Under Budget
 ```
 
 This keeps rows where actual spending is less than budgeted spending.
@@ -740,6 +921,14 @@ Use `&` for AND.
 
 ```python
 result = df[(df["Actual"] < df["Budgeted"]) & (df["Budgeted"] >= 300)]
+print(result)
+```
+
+Output:
+
+```text
+  Order  Budgeted  Actual        Status
+2  C003       300     250  Under Budget
 ```
 
 Each condition must be wrapped in parentheses.
@@ -795,6 +984,15 @@ known_status = df[df["Status"].notna()]
 
 ```python
 result = df.query("Actual < Budgeted")
+print(result)
+```
+
+Output:
+
+```text
+  Order  Budgeted  Actual        Status
+0  C001       100      90  Under Budget
+2  C003       300     250  Under Budget
 ```
 
 Query syntax can be easier to read for simple numeric comparisons.
@@ -813,6 +1011,17 @@ result = df.query("`Actual Amount` < `Budgeted Amount`")
 
 ```python
 df["Variance"] = df["Budgeted"] - df["Actual"]
+print(df[["Order", "Budgeted", "Actual", "Variance"]])
+```
+
+Output:
+
+```text
+  Order  Budgeted  Actual  Variance
+0  C001       100      90        10
+1  C002       200     210       -10
+2  C003       300     250        50
+3  C004       400     400         0
 ```
 
 Positive variance means budgeted is greater than actual.
@@ -841,6 +1050,17 @@ conditions = [
 choices = ["Under Budget", "Over Budget", "On Budget"]
 
 df["Budget_Status"] = np.select(conditions, choices, default="Review")
+print(df[["Order", "Budget_Status"]])
+```
+
+Output:
+
+```text
+  Order  Budget_Status
+0  C001   Under Budget
+1  C002    Over Budget
+2  C003   Under Budget
+3  C004      On Budget
 ```
 
 ## 11.4 Update existing column
@@ -947,6 +1167,17 @@ Descending:
 
 ```python
 df = df.sort_values("Variance", ascending=False)
+print(df[["Order", "Variance"]])
+```
+
+Output:
+
+```text
+  Order  Variance
+2  C003        50
+0  C001        10
+3  C004         0
+1  C002       -10
 ```
 
 ## 13.2 Sort by multiple columns
@@ -967,6 +1198,17 @@ df = df.sort_index()
 
 ```python
 df["Variance_Rank"] = df["Variance"].rank(ascending=False)
+print(df[["Order", "Variance", "Variance_Rank"]])
+```
+
+Output:
+
+```text
+  Order  Variance  Variance_Rank
+2  C003        50            1.0
+0  C001        10            2.0
+3  C004         0            3.0
+1  C002       -10            4.0
 ```
 
 Highest variance gets rank 1.
@@ -983,7 +1225,16 @@ Dense ranking does not skip numbers after ties.
 
 # 14. Handling Missing Data
 
-Missing data is common in real reports.
+Missing data is common in real reports. The examples in this section use this small DataFrame:
+
+```python
+df = pd.DataFrame({
+    "Order": ["C001", "C002", None, "C004"],
+    "Budgeted": [100, 200, 300, None],
+    "Actual": [90, None, 250, 400],
+    "Status": ["Open", None, "Closed", "Open"]
+})
+```
 
 pandas usually represents missing values as:
 
@@ -1004,6 +1255,16 @@ Count missing values per column:
 df.isna().sum()
 ```
 
+Output:
+
+```text
+Order       1
+Budgeted    1
+Actual      1
+Status      1
+dtype: int64
+```
+
 Percentage missing:
 
 ```python
@@ -1013,13 +1274,32 @@ missing_pct = df.isna().mean() * 100
 ## 14.2 Filter rows with missing values
 
 ```python
-missing_member_id = df[df["Member_ID"].isna()]
+missing_orders = df[df["Order"].isna()]
+print(missing_orders)
+```
+
+Output:
+
+```text
+  Order  Budgeted  Actual  Status
+2  None     300.0   250.0  Closed
 ```
 
 ## 14.3 Fill missing values
 
 ```python
 df["Status"] = df["Status"].fillna("Unknown")
+print(df[["Order", "Status"]])
+```
+
+Output:
+
+```text
+  Order   Status
+0  C001     Open
+1  C002  Unknown
+2  None   Closed
+3  C004     Open
 ```
 
 Fill numeric values with zero:
@@ -1140,12 +1420,32 @@ Example:
 df = pd.DataFrame({
     "Vendor": ["  Acme Supplies ", "BLUE RIVER", "northwind traders"]
 })
+print(df)
+```
+
+Output:
+
+```text
+              Vendor
+0    Acme Supplies
+1         BLUE RIVER
+2  northwind traders
 ```
 
 ## 16.1 Strip spaces
 
 ```python
 df["Vendor"] = df["Vendor"].str.strip()
+print(df)
+```
+
+Output:
+
+```text
+              Vendor
+0      Acme Supplies
+1         BLUE RIVER
+2  northwind traders
 ```
 
 ## 16.2 Uppercase/lowercase/title case
@@ -1154,6 +1454,16 @@ df["Vendor"] = df["Vendor"].str.strip()
 df["Vendor_Upper"] = df["Vendor"].str.upper()
 df["Vendor_Lower"] = df["Vendor"].str.lower()
 df["Vendor_Title"] = df["Vendor"].str.title()
+print(df[["Vendor", "Vendor_Title"]])
+```
+
+Output:
+
+```text
+              Vendor       Vendor_Title
+0      Acme Supplies      Acme Supplies
+1         BLUE RIVER         Blue River
+2  northwind traders  Northwind Traders
 ```
 
 ## 16.3 Contains
@@ -1174,6 +1484,15 @@ df["Vendor"] = df["Vendor"].str.replace("BLUE", "Blue", regex=False)
 df = pd.DataFrame({"Full_Name": ["John Smith", "Maria Lopez"]})
 
 df[["First_Name", "Last_Name"]] = df["Full_Name"].str.split(" ", n=1, expand=True)
+print(df)
+```
+
+Output:
+
+```text
+     Full_Name First_Name Last_Name
+0   John Smith       John     Smith
+1  Maria Lopez      Maria     Lopez
 ```
 
 ## 16.6 Extract with regex
@@ -1182,6 +1501,15 @@ df[["First_Name", "Last_Name"]] = df["Full_Name"].str.split(" ", n=1, expand=Tru
 df = pd.DataFrame({"Log": ["Paid at 150.00%", "Paid at 200.00%"]})
 
 df["Percent"] = df["Log"].str.extract(r"(\d+\.\d+)%")
+print(df)
+```
+
+Output:
+
+```text
+               Log Percent
+0  Paid at 150.00%  150.00
+1  Paid at 200.00%  200.00
 ```
 
 This extracts `150.00` and `200.00` from the text.
@@ -1433,15 +1761,28 @@ df = pd.DataFrame({
     "Orders": [10, 20, 15, 25, 30],
     "Sales": [1000, 2500, 1500, 3000, 4000]
 })
+print(df)
+```
+
+Output:
+
+```text
+  Reviewer Customer  Orders  Sales
+0      Ana        A      10   1000
+1      Ana        B      20   2500
+2     Luis        A      15   1500
+3     Luis        B      25   3000
+4    Maria        A      30   4000
 ```
 
 ## 20.1 Group by one column
 
 ```python
 by_reviewer = df.groupby("Reviewer")["Orders"].sum()
+print(by_reviewer)
 ```
 
-Output concept:
+Output:
 
 ```text
 Reviewer
@@ -1455,6 +1796,19 @@ Name: Orders, dtype: int64
 
 ```python
 by_reviewer_customer = df.groupby(["Reviewer", "Customer"])["Sales"].sum()
+print(by_reviewer_customer)
+```
+
+Output:
+
+```text
+Reviewer  Customer
+Ana       A           1000
+          B           2500
+Luis      A           1500
+          B           3000
+Maria     A           4000
+Name: Sales, dtype: int64
 ```
 
 ## 20.3 Multiple aggregations
@@ -1466,6 +1820,16 @@ summary = df.groupby("Reviewer").agg(
     Total_Sales=("Sales", "sum"),
     Average_Sales=("Sales", "mean")
 ).reset_index()
+print(summary)
+```
+
+Output:
+
+```text
+  Reviewer  Total_Orders  Average_Orders  Total_Sales  Average_Sales
+0      Ana            30            15.0         3500         1750.0
+1     Luis            40            20.0         4500         2250.0
+2    Maria            30            30.0         4000         4000.0
 ```
 
 This is one of the most useful pandas patterns.
@@ -1482,7 +1846,7 @@ counts = df.groupby("Reviewer").size().reset_index(name="Row_Count")
 counts = df.groupby("Reviewer")["Sales"].count()
 ```
 
-`size()` counts rows.  
+`size()` counts rows.
 `count()` counts non-missing values.
 
 ## 20.6 Group by date period
@@ -1524,6 +1888,17 @@ pivot = pd.pivot_table(
     aggfunc="sum",
     fill_value=0
 )
+print(pivot)
+```
+
+Output:
+
+```text
+Customer     A     B
+Reviewer
+Ana       1000  2500
+Luis      1500  3000
+Maria     4000     0
 ```
 
 Interpretation:
@@ -1620,6 +1995,19 @@ long = wide.melt(
     var_name="Month",
     value_name="Orders"
 )
+print(long)
+```
+
+Output:
+
+```text
+  Reviewer Month  Orders
+0      Ana   Jan      10
+1     Luis   Jan       8
+2      Ana   Feb      12
+3     Luis   Feb       9
+4      Ana   Mar      15
+5     Luis   Mar      11
 ```
 
 ## 22.3 Pivot long to wide
@@ -1697,6 +2085,16 @@ vendors = pd.DataFrame({
 })
 
 merged = orders.merge(vendors, on="Vendor_ID", how="left")
+print(merged)
+```
+
+Output:
+
+```text
+  Order  Vendor_ID    Vendor_Name
+0  C001          1  Acme Supplies
+1  C002          2     Blue River
+2  C003          1  Acme Supplies
 ```
 
 ## 23.4 Join types
