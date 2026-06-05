@@ -2418,6 +2418,63 @@ How to read this chart:
 - Values close to `0` mean weak linear relationship.
 - The diagonal is always `1` because each variable perfectly correlates with itself.
 
+## 28.5 Chart-reading foundations for non-mathematicians
+
+Charts are visual summaries. They do not replace the data; they help you notice patterns faster than reading every row. A good chart should answer one clear question, such as "Are orders increasing?", "Which customer has the highest total?", or "Are there unusual values that need review?"
+
+Before interpreting any chart, identify these parts:
+
+- **Title:** tells you the main subject. If the title is vague, ask what question the chart is supposed to answer.
+- **X-axis:** usually shows time, categories, or value ranges. Read the labels before comparing anything.
+- **Y-axis:** shows the measured amount, count, percentage, dollars, rate, or score. Check the units.
+- **Legend:** explains colors, lines, markers, or groups. A chart with multiple colors is hard to read without a clear legend.
+- **Scale:** tells you how big the numbers are. A chart that starts at 90 instead of 0 can make small differences look dramatic.
+- **Source and filters:** tell you which records were included or excluded. A chart filtered to one region should not be interpreted as the entire business.
+
+A simple reading process:
+
+1. **Read the title and labels first.** Do not interpret the shape until you know what the chart measures.
+2. **Look for the biggest message.** Is one category clearly largest? Is the line rising? Is the distribution concentrated?
+3. **Check the scale.** Are numbers dollars, percentages, counts, thousands, or millions? Does the axis start at zero?
+4. **Compare only like with like.** Counts, percentages, dollars, averages, and rates answer different questions.
+5. **Look for exceptions.** Outliers, gaps, sudden drops, or unusual categories often identify records to inspect.
+6. **Ask what action follows.** A useful chart should lead to a decision, question, investigation, or confirmation.
+
+## 28.6 Insight vocabulary: what a chart can tell you
+
+When you describe a chart, use practical words instead of statistical jargon whenever possible:
+
+| Pattern | Plain-English meaning | Example business question |
+|---|---|---|
+| **Trend** | Values generally move up, down, or stay flat over time. | Are monthly orders increasing? |
+| **Spike** | A sudden unusually high value. | Was there a one-time rush order or data error? |
+| **Drop** | A sudden unusually low value. | Did volume fall because of a process issue or missing data? |
+| **Seasonality** | A pattern repeats by day, month, quarter, or season. | Are Mondays heavier than Fridays? |
+| **Ranking** | Categories can be ordered from highest to lowest. | Which customer creates the most work? |
+| **Share** | Each category contributes part of a total. | What percent of orders came through each method? |
+| **Distribution** | Shows common, rare, low, high, and typical values. | What is a normal processing time? |
+| **Spread** | Values are tightly grouped or widely different. | Are reviewers producing consistent results? |
+| **Outlier** | A value is far away from most other values. | Which records need manual review? |
+| **Relationship** | Two measures tend to move together, apart, or not at all. | Do more units usually mean more profit? |
+| **Cluster** | Records form visible groups. | Are there different types of customers or orders? |
+
+## 28.7 Chart integrity checklist
+
+Use this checklist before trusting a chart in a report or presentation:
+
+- Does the chart answer one specific question?
+- Are the title, axes, legend, and units clear?
+- Is the data source stated or understood?
+- Are important filters shown?
+- Are missing values handled intentionally?
+- Are totals, averages, and percentages labeled correctly?
+- Are categories sorted in a meaningful order?
+- Does the y-axis scale exaggerate or hide differences?
+- Are there too many colors, labels, or categories?
+- Is the chart type appropriate for the question?
+
+A chart can be technically correct and still confusing. If a reader cannot explain the main point in one sentence, simplify the chart or add a short interpretation note.
+
 ---
 
 # 29. Plotting with pandas and Matplotlib
@@ -2642,6 +2699,288 @@ plt.show()
 
 Clear labels are not cosmetic. They make the chart understandable.
 
+## 29.13 Add reference lines and annotations
+
+Reference lines help readers compare values to a target, average, budget, or threshold. An annotation calls attention to one important point.
+
+```python
+ax = df.plot(x="Month", y="Profit", kind="bar", legend=False)
+average_profit = df["Profit"].mean()
+
+ax.axhline(average_profit, color="red", linestyle="--", label="Average profit")
+ax.annotate(
+    "Highest profit",
+    xy=(df["Profit"].idxmax(), df["Profit"].max()),
+    xytext=(df["Profit"].idxmax(), df["Profit"].max() + 1000),
+    arrowprops={"arrowstyle": "->"}
+)
+ax.set_title("Profit by Month Compared with Average")
+ax.set_xlabel("Month")
+ax.set_ylabel("Profit ($)")
+ax.legend()
+plt.tight_layout()
+plt.show()
+```
+
+Use reference lines when the reader needs to know whether a value is above or below a standard. Use annotations sparingly; too many notes make the chart harder to read.
+
+## 29.14 Format numbers for readable charts
+
+Large numbers and percentages should be formatted so the reader does not have to mentally decode them.
+
+```python
+from matplotlib.ticker import FuncFormatter, PercentFormatter
+
+def dollars(value, position):
+    return f"${value:,.0f}"
+
+ax = df.plot(x="Month", y="Revenue", kind="line", marker="o")
+ax.yaxis.set_major_formatter(FuncFormatter(dollars))
+ax.set_title("Revenue by Month")
+ax.set_ylabel("Revenue")
+plt.tight_layout()
+plt.show()
+```
+
+Percentage example:
+
+```python
+status_share = pd.Series({"On Time": 0.82, "Late": 0.18})
+ax = status_share.plot(kind="bar")
+ax.yaxis.set_major_formatter(PercentFormatter(xmax=1))
+ax.set_title("Order Timeliness Share")
+plt.tight_layout()
+plt.show()
+```
+
+## 29.15 Plot grouped summaries from pandas
+
+Most useful business charts start with a grouped summary rather than raw rows.
+
+```python
+customer_profit = (
+    df.groupby("Month", as_index=False)
+      .agg(Total_Profit=("Profit", "sum"), Order_Count=("Orders", "sum"))
+)
+
+ax = customer_profit.plot(x="Month", y="Total_Profit", kind="bar", legend=False)
+ax.set_title("Total Profit by Month")
+ax.set_xlabel("Month")
+ax.set_ylabel("Total Profit")
+plt.tight_layout()
+plt.show()
+```
+
+The chart should match the summary table. If the table says the highest month is June, the tallest bar should also be June. This is a simple but important quality check.
+
+## 29.16 Small multiples for cleaner comparisons
+
+A chart with too many lines can become unreadable. Instead, use separate panels with the same scale.
+
+```python
+monthly = pd.DataFrame({
+    "Month": ["Jan", "Feb", "Mar", "Apr"] * 2,
+    "Region": ["East"] * 4 + ["West"] * 4,
+    "Orders": [40, 45, 50, 48, 30, 42, 44, 52]
+})
+
+axes = monthly.pivot(index="Month", columns="Region", values="Orders").plot(
+    kind="line",
+    marker="o",
+    subplots=True,
+    layout=(1, 2),
+    sharey=True,
+    figsize=(8, 3)
+)
+plt.tight_layout()
+plt.show()
+```
+
+Small multiples are useful when each group deserves comparison but putting every group on one chart would create a spaghetti chart.
+
+## 29.17 Sort bars so the message is obvious
+
+Bar charts are easiest to read when categories are sorted by value, unless the categories already have a natural order such as months, workflow stages, or priority levels.
+
+```python
+customer_summary = pd.DataFrame({
+    "Customer": ["North Co", "West Shop", "Online", "South LLC"],
+    "Total_Actual": [2200, 3400, 950, 1800]
+})
+
+ordered = customer_summary.sort_values("Total_Actual", ascending=True)
+
+ax = ordered.plot(x="Customer", y="Total_Actual", kind="barh", legend=False)
+ax.set_title("Total Actual Amount by Customer")
+ax.set_xlabel("Actual Amount ($)")
+ax.set_ylabel("Customer")
+plt.tight_layout()
+plt.show()
+```
+
+Interpretation:
+
+- The longest horizontal bar is the largest customer by actual amount.
+- Horizontal bars work well when labels are long.
+- Sorting from smallest to largest places the largest bar at the top in many rendered charts, which is often easier for readers.
+
+## 29.18 Show percentages as a 100% stacked bar
+
+A regular stacked bar shows total size and category composition. A **100% stacked bar** shows composition only. This is useful when you want to compare percentages across groups even if the groups have different total volumes.
+
+```python
+from matplotlib.ticker import PercentFormatter
+
+status_counts = pd.DataFrame({
+    "Region": ["East", "West", "South"],
+    "On_Time": [90, 50, 40],
+    "Late": [10, 25, 5],
+    "Review": [5, 10, 5]
+})
+
+status_pct = status_counts.set_index("Region")
+status_pct = status_pct.div(status_pct.sum(axis=1), axis=0)
+
+ax = status_pct.plot(kind="bar", stacked=True)
+ax.yaxis.set_major_formatter(PercentFormatter(xmax=1))
+ax.set_title("Order Status Mix by Region")
+ax.set_xlabel("Region")
+ax.set_ylabel("Percent of Orders")
+plt.legend(title="Status", bbox_to_anchor=(1.02, 1), loc="upper left")
+plt.tight_layout()
+plt.show()
+```
+
+How to read it:
+
+- Each bar equals 100% for that region.
+- The colored sections show the share of each status inside the region.
+- Use this when the question is about mix, not total count.
+- If total volume also matters, show a count table or a second chart beside it.
+
+## 29.19 Pareto chart for the biggest contributors
+
+A Pareto chart combines bars and a cumulative-percentage line. It helps answer: "Which few categories explain most of the total?"
+
+```python
+from matplotlib.ticker import PercentFormatter
+
+issues = pd.Series({
+    "Missing Info": 42,
+    "Price Mismatch": 30,
+    "Late Shipment": 18,
+    "Duplicate": 7,
+    "Other": 5
+}).sort_values(ascending=False)
+
+pareto = pd.DataFrame({"Count": issues})
+pareto["Cumulative_Percent"] = pareto["Count"].cumsum() / pareto["Count"].sum()
+
+fig, ax1 = plt.subplots()
+pareto["Count"].plot(kind="bar", ax=ax1, color="steelblue")
+ax1.set_ylabel("Issue Count")
+ax1.set_title("Pareto Chart of Issue Types")
+
+ax2 = ax1.twinx()
+pareto["Cumulative_Percent"].plot(ax=ax2, color="darkorange", marker="o")
+ax2.yaxis.set_major_formatter(PercentFormatter(xmax=1))
+ax2.set_ylabel("Cumulative Percent")
+plt.tight_layout()
+plt.show()
+```
+
+Interpretation:
+
+- The bars show the largest issue types.
+- The line shows how quickly those issue types add up toward 100%.
+- If the first two bars explain most of the total, improving those two issues may have the biggest impact.
+
+## 29.20 Before-and-after comparison
+
+Use a before-and-after chart when you want to show change between two points, such as before and after a process update.
+
+```python
+before_after = pd.DataFrame({
+    "Metric": ["Average Days", "Late Orders", "Manual Reviews"],
+    "Before": [8.5, 32, 45],
+    "After": [5.2, 18, 29]
+})
+
+ax = before_after.plot(x="Metric", y=["Before", "After"], kind="bar")
+ax.set_title("Before-and-After Process Comparison")
+ax.set_xlabel("Metric")
+ax.set_ylabel("Value")
+plt.xticks(rotation=30, ha="right")
+plt.tight_layout()
+plt.show()
+```
+
+How to read it:
+
+- Compare the two bars within each metric.
+- Lower may be better for some metrics, such as days or late orders.
+- Always state whether higher or lower is better so the reader does not guess.
+
+## 29.21 Dual-axis charts: use carefully
+
+A dual-axis chart uses one y-axis on the left and another y-axis on the right. It can be useful when two measures have very different units, but it can also mislead readers because the line shapes depend on the chosen scales.
+
+```python
+fig, ax1 = plt.subplots()
+
+df.plot(x="Month", y="Revenue", kind="bar", ax=ax1, color="lightsteelblue", legend=False)
+ax1.set_ylabel("Revenue ($)")
+
+ax2 = ax1.twinx()
+df.plot(x="Month", y="Orders", kind="line", marker="o", ax=ax2, color="darkorange", legend=False)
+ax2.set_ylabel("Orders")
+
+ax1.set_title("Revenue and Orders by Month")
+plt.tight_layout()
+plt.show()
+```
+
+Use a dual-axis chart only when:
+
+- The two measures are clearly labeled.
+- The chart is for high-level comparison, not precise proof.
+- You explain that the axes use different scales.
+
+If the audience may be confused, use two aligned charts instead.
+
+## 29.22 Plotting missing values intentionally
+
+Missing values can create gaps or misleading lines. Decide whether missing means "zero," "not collected," or "not applicable." These are different meanings.
+
+```python
+series = pd.Series(
+    [100, 120, None, 150, 160],
+    index=pd.to_datetime(["2026-01-01", "2026-02-01", "2026-03-01", "2026-04-01", "2026-05-01"])
+)
+
+ax = series.plot(marker="o")
+ax.set_title("Monthly Value with Missing March Data")
+ax.set_xlabel("Month")
+ax.set_ylabel("Value")
+plt.tight_layout()
+plt.show()
+```
+
+Options:
+
+```python
+# Keep the gap so readers see data was missing.
+series_with_gap = series
+
+# Fill only when zero is the true business meaning.
+series_zero_filled = series.fillna(0)
+
+# Interpolate only when estimating between known points makes sense.
+series_interpolated = series.interpolate()
+```
+
+Do not fill missing values just to make a chart look smooth. The visual should represent the business truth.
+
 ---
 
 # 30. How to Read Common Plot Types
@@ -2753,6 +3092,438 @@ Look for:
 - Strong positive values.
 - Strong negative values.
 - Blocks of similar values.
+
+## 30.8 Which chart should I use?
+
+Start with the question, not the chart. The same data can produce many charts, but only a few will answer the question clearly.
+
+| If your question is... | Use this chart | Why | Avoid |
+|---|---|---|---|
+| "How has this changed over time?" | Line chart | Shows direction, trend, and timing. | Pie chart |
+| "Which category is biggest or smallest?" | Bar chart | Makes category comparison easy. | Pie chart with many slices |
+| "What is the total volume over time?" | Area chart or line chart | Emphasizes size and trend. | Stacked area with too many groups |
+| "What share of the whole does each category represent?" | Bar chart with percentages or simple pie chart | Shows part-to-whole relationship. | Pie chart with similar-sized slices |
+| "What values are typical, high, low, or unusual?" | Histogram or box plot | Shows distribution and outliers. | Line chart |
+| "Are two numeric measures related?" | Scatter plot | Shows relationship, clusters, and unusual records. | Bar chart |
+| "Which combinations are high or low?" | Heatmap | Shows patterns across rows and columns. | 3-D charts |
+| "Are groups different from each other?" | Box plot, grouped bar chart, or small multiples | Compares centers, spread, or totals by group. | One overcrowded chart |
+
+A practical rule: if readers need to compare exact sizes, use bars. If readers need to see movement over time, use lines. If readers need to see the shape of numeric values, use histograms or box plots.
+
+## 30.9 What each chart type is not good for
+
+Understanding limitations prevents misleading conclusions.
+
+- **Line plots** are not ideal for unordered categories. Connecting unrelated categories implies a sequence that may not exist.
+- **Bar plots** can hide what is happening inside each category. A bar showing an average may hide extreme values.
+- **Histograms** depend on bin size. Different bins can make the same data look smoother, rougher, or more clustered.
+- **Box plots** are compact but can feel abstract to beginners. Pair them with a short explanation or a table of medians.
+- **Scatter plots** show association, not proof that one variable caused another.
+- **Pie charts** are poor for precise comparison, rankings, negative values, or many categories.
+- **Heatmaps** can exaggerate patterns if the color scale is poorly chosen. Always label the values or provide a clear color bar.
+
+## 30.10 Common misleading chart problems
+
+Watch for these issues when reviewing charts from any tool, including pandas, Excel, BI dashboards, or presentations:
+
+1. **Truncated axis:** a y-axis that starts above zero can make small differences look large. This is especially risky with bar charts.
+2. **Wrong denominator:** a percentage is meaningless unless you know what it is a percentage of.
+3. **Mixed units:** do not compare dollars, counts, and rates as if they are the same measurement.
+4. **Too many categories:** a crowded chart hides the message. Group small categories as "Other" when appropriate.
+5. **Unsorted bars:** random category order makes comparison harder. Sort bars by value unless time or a required business order matters.
+6. **Averages without counts:** an average based on 3 records should not be treated the same as an average based on 3,000 records.
+7. **Ignoring missing data:** a drop may mean records are missing, not that performance changed.
+8. **Correlation treated as causation:** two measures moving together does not prove one caused the other.
+9. **Decorative 3-D effects:** 3-D charts distort size and make values harder to compare.
+10. **Color without meaning:** colors should group, warn, highlight, or separate; they should not be random decoration.
+
+## 30.11 Chart design rules that improve understanding
+
+Use these rules for charts meant for non-technical readers:
+
+- Put the main message in the title: "June Had the Highest Profit" is more useful than "Profit Chart."
+- Label axes with units: "Profit ($)" is clearer than "Profit."
+- Use consistent colors: for example, green for positive, red for negative, gray for reference.
+- Sort categories intentionally: highest-to-lowest for rankings, calendar order for months, process order for workflow stages.
+- Reduce clutter: remove unnecessary gridlines, extra decimals, and redundant legends.
+- Show data labels only when they help. Labeling every point can create noise.
+- Use annotations for the one or two points that require attention.
+- Keep comparisons fair: use the same scale when comparing similar charts.
+- Include the time period and filters in the chart title, subtitle, or surrounding text.
+
+## 30.12 Turning a chart into an insight statement
+
+A chart becomes useful when you can explain what it means. Use this sentence structure:
+
+```text
+[What changed or stands out] + [how much or where] + [why it matters or what to check next].
+```
+
+Examples:
+
+- "Profit increased from January to June, with June highest at $7,800, so June's order mix should be reviewed for repeatable patterns."
+- "West Shop has the largest negative variance, so those records should be checked for rush fees, pricing changes, or data-entry issues."
+- "Most orders are between 80 and 100 units, but one month is far higher, so confirm whether it was a valid spike or a duplicate entry."
+- "Orders and profit generally rise together, but two high-order months have low profit, so review cost or discount differences."
+
+## 30.13 Chart-to-pandas workflow
+
+A reliable workflow connects the visual back to the DataFrame:
+
+1. **Prepare the data:** clean column names, convert dates, handle missing values, and validate numeric columns.
+2. **Summarize the data:** use `groupby`, `pivot_table`, `value_counts`, or calculated columns.
+3. **Check the summary table:** confirm totals, counts, percentages, and sorting before plotting.
+4. **Create the chart:** choose the chart type based on the question.
+5. **Improve readability:** add title, labels, formatting, legend, reference lines, and annotations.
+6. **Interpret the result:** write a one-sentence insight and identify records that need deeper review.
+7. **Save or export:** save the plot and, when useful, export the summary table used to make the chart.
+
+Example:
+
+```python
+summary = (
+    orders.groupby("Customer", as_index=False)
+          .agg(Orders=("Reference", "nunique"), Total_Actual=("Actual", "sum"))
+          .sort_values("Total_Actual", ascending=False)
+)
+
+ax = summary.plot(x="Customer", y="Total_Actual", kind="bar", legend=False)
+ax.set_title("Total Actual Amount by Customer")
+ax.set_xlabel("Customer")
+ax.set_ylabel("Actual Amount ($)")
+plt.xticks(rotation=45, ha="right")
+plt.tight_layout()
+plt.show()
+```
+
+Interpretation: the tallest bar identifies the customer with the highest actual amount, but the `Orders` column in the summary table should also be checked because one large order and many small orders can create the same total.
+
+## 30.14 Dashboard and report review checklist
+
+When multiple charts appear together, review the whole page:
+
+- What decision is the dashboard supposed to support?
+- Are the date ranges and filters consistent across charts?
+- Do totals in different charts reconcile with each other?
+- Are the same colors used for the same categories across the page?
+- Is the most important chart placed first or largest?
+- Are there tables for details when a chart shows an exception?
+- Are definitions clear, especially for metrics like "completed," "late," "savings," "variance," or "active"?
+- Does the dashboard show both volume and rate when both matter? For example, late-order count and late-order percentage answer different questions.
+
+## 30.15 Measures, dimensions, grain, and filters
+
+Many chart mistakes happen before plotting. Four words help prevent confusion:
+
+- **Measure:** the number being analyzed, such as sales, profit, order count, processing days, error rate, or variance.
+- **Dimension:** the category or time field used to split the measure, such as customer, month, region, reviewer, status, or product line.
+- **Grain:** what one row represents. One row might be one order, one line item, one customer per month, or one daily summary.
+- **Filter:** which records are included, such as one month, one region, active customers only, or completed orders only.
+
+Example questions:
+
+| Question | Measure | Dimension | Grain | Filter |
+|---|---|---|---|---|
+| Which customer has the most actual spend? | Actual amount | Customer | Order or line item | Reporting period |
+| Are late orders improving over time? | Late-order rate | Month | Order | Completed orders |
+| Which reviewer handles the most work? | Order count | Reviewer | Order | Assigned orders |
+| Which product line has the highest average variance? | Average variance | Product line | Order | Non-cancelled orders |
+
+Before creating a chart, say the question out loud in this format:
+
+```text
+I want to compare [measure] by [dimension] for [filtered records] where each row represents [grain].
+```
+
+If you cannot complete that sentence, the chart definition is not clear enough yet.
+
+## 30.16 Count, sum, average, percentage, and rate
+
+Non-mathematicians often see a chart and ask, "Is that a count or a percent?" That question matters because each metric tells a different story.
+
+| Metric type | What it answers | pandas pattern | Common mistake |
+|---|---|---|---|
+| Count | How many records? | `df.groupby("Status").size()` | Treating count as performance quality. |
+| Sum | How much total value? | `df.groupby("Customer")["Actual"].sum()` | Ignoring that one large record can dominate. |
+| Average | What is typical per record? | `df.groupby("Reviewer")["Days"].mean()` | Comparing averages without checking counts. |
+| Median | What is the middle record? | `df.groupby("Customer")["Actual"].median()` | Forgetting that it ignores total volume. |
+| Percentage | What share of the whole? | `counts / counts.sum()` | Not stating the denominator. |
+| Rate | How often did something happen? | `late_orders / total_orders` | Comparing rates from very small samples. |
+
+Example: one reviewer may have the highest number of late orders because they handled the most orders overall. A late-order **rate** may be fairer than a late-order **count**.
+
+```python
+reviewer = pd.DataFrame({
+    "Reviewer": ["Ana", "Luis", "Maria"],
+    "Orders": [120, 40, 20],
+    "Late_Orders": [12, 8, 3]
+})
+
+reviewer["Late_Rate"] = reviewer["Late_Orders"] / reviewer["Orders"]
+```
+
+Interpretation:
+
+- `Late_Orders` answers "how many late orders?"
+- `Late_Rate` answers "what percent of each reviewer's orders were late?"
+- Both can be important, but they should not be treated as the same metric.
+
+## 30.17 Reading trends over time
+
+A time chart should usually be read in layers:
+
+1. **Overall direction:** is the line generally rising, falling, or flat?
+2. **Size of change:** is the change small, moderate, or large compared with the starting value?
+3. **Volatility:** does the line move smoothly, or does it jump up and down?
+4. **Turning points:** where did the direction change?
+5. **Seasonality:** does the same pattern repeat by month, quarter, weekday, or season?
+6. **Recent values:** are the latest periods better, worse, or normal compared with the past?
+
+Useful pandas calculations for time charts:
+
+```python
+daily = df.sort_values("Date").set_index("Date")
+
+monthly = daily.resample("ME").agg(
+    Revenue=("Revenue", "sum"),
+    Orders=("Orders", "sum")
+)
+
+monthly["Revenue_Change"] = monthly["Revenue"].diff()
+monthly["Revenue_Pct_Change"] = monthly["Revenue"].pct_change()
+monthly["Revenue_3_Month_Avg"] = monthly["Revenue"].rolling(3).mean()
+```
+
+Interpretation:
+
+- `diff()` shows the absolute change from the previous period.
+- `pct_change()` shows the percentage change from the previous period.
+- `rolling(3).mean()` smooths short-term noise so the broader trend is easier to see.
+
+## 30.18 Reading category comparisons
+
+When comparing categories, ask whether the chart shows total volume, average performance, or share of total.
+
+Good category-comparison questions:
+
+- Which customer has the highest total spend?
+- Which product line has the most orders?
+- Which reviewer has the highest average processing time?
+- Which status accounts for the largest share of records?
+- Which category is unexpectedly small or missing?
+
+A useful category chart often starts with this pattern:
+
+```python
+summary = (
+    df.groupby("Category", as_index=False)
+      .agg(
+          Records=("Order_ID", "nunique"),
+          Total_Actual=("Actual", "sum"),
+          Average_Actual=("Actual", "mean")
+      )
+      .sort_values("Total_Actual", ascending=False)
+)
+```
+
+Interpretation checklist:
+
+- Are categories sorted in a meaningful way?
+- Are small categories grouped as `Other` if there are too many?
+- Are category names clean and consistent? For example, `North`, `north`, and `North ` may be the same category with messy spelling.
+- Is the chart comparing totals when it should compare rates, or rates when it should compare totals?
+
+## 30.19 Reading distributions without advanced math
+
+A distribution shows how values are spread across low, middle, and high ranges. You do not need advanced math to read one.
+
+Ask these questions:
+
+- What values are most common?
+- What values are rare?
+- Is there one main group or more than one group?
+- Is the data mostly low with a few very high values?
+- Are there values that seem impossible or suspicious?
+
+Practical examples:
+
+- A histogram of processing days may show that most orders finish in 2 to 4 days, with a few taking 20 days. Those 20-day records need investigation.
+- A box plot by reviewer may show that most reviewers have similar medians, but one reviewer has much wider spread. That may indicate a different work mix or inconsistent process.
+- A distribution of actual amounts may be right-skewed because most orders are small and a few orders are very large. In that case, the median may describe a typical order better than the mean.
+
+Useful pandas summary:
+
+```python
+df["Processing_Days"].describe(percentiles=[0.25, 0.5, 0.75, 0.9, 0.95])
+```
+
+The 90th or 95th percentile can be useful in business reports because it answers, "How high are the unusually high but still common-enough values?"
+
+## 30.20 Reading relationships without assuming causation
+
+Scatter plots and correlations can show that two numeric measures move together, but they do not prove cause and effect.
+
+When reading a relationship chart, ask:
+
+1. Do the points rise, fall, or form no clear pattern?
+2. Are there clusters that suggest different groups?
+3. Are there outliers that deserve separate review?
+4. Could another factor explain the pattern?
+5. Is the relationship strong enough to be useful for decisions?
+
+Example:
+
+```python
+ax = df.plot(x="Orders", y="Profit", kind="scatter")
+ax.set_title("Orders vs Profit")
+ax.set_xlabel("Orders")
+ax.set_ylabel("Profit ($)")
+plt.tight_layout()
+plt.show()
+
+df[["Orders", "Profit"]].corr()
+```
+
+Interpretation:
+
+- A positive pattern means higher order counts often appear with higher profit.
+- It does not prove that increasing order count automatically increases profit. Pricing, discounts, product mix, cost, and customer type may also matter.
+- Outliers may be more important than the overall relationship because they can identify unusual high-value or high-risk records.
+
+## 30.21 Chart captions for business reports
+
+A short caption can make a chart much easier to understand. A good caption contains:
+
+- **Finding:** what stands out.
+- **Evidence:** the number, group, or period that supports it.
+- **Caution:** anything the reader should not over-assume.
+- **Next step:** what to investigate or do.
+
+Template:
+
+```text
+Finding: [main point]. Evidence: [specific value or comparison]. Caution: [limit of chart]. Next step: [action].
+```
+
+Example captions:
+
+- `Finding: West Shop has the highest actual amount. Evidence: its bar is the largest in the customer summary. Caution: the chart shows total dollars, not number of orders. Next step: review whether the total is driven by many orders or one large order.`
+- `Finding: Processing time improved after April. Evidence: the line drops for May and June. Caution: confirm that the same order types are included in all months. Next step: compare May and June by product line.`
+- `Finding: A few records are much higher than the normal range. Evidence: the box plot shows outlier points. Caution: outliers may be valid large orders. Next step: inspect those records before removing them.`
+
+## 30.22 Choosing colors for clarity and accessibility
+
+Color should communicate meaning. It should not be decoration only.
+
+Practical rules:
+
+- Use one main color for normal bars or lines.
+- Use an accent color to highlight the important category or exception.
+- Use red/green carefully because some readers have color-vision limitations and because red/green can imply good/bad even when that is not intended.
+- Do not rely on color alone. Use labels, legends, marker shapes, or annotations too.
+- Keep the same category the same color across related charts.
+- Use lighter colors for background or reference information and stronger colors for the main point.
+
+Simple highlight example:
+
+```python
+summary = pd.DataFrame({
+    "Customer": ["North Co", "West Shop", "Online", "South LLC"],
+    "Total_Actual": [2200, 3400, 950, 1800]
+}).sort_values("Total_Actual", ascending=False)
+
+colors = ["darkorange" if value == summary["Total_Actual"].max() else "lightgray"
+          for value in summary["Total_Actual"]]
+
+ax = summary.plot(x="Customer", y="Total_Actual", kind="bar", color=colors, legend=False)
+ax.set_title("Highest Customer by Actual Amount")
+ax.set_ylabel("Actual Amount ($)")
+plt.tight_layout()
+plt.show()
+```
+
+The highlight tells the reader where to look first.
+
+## 30.23 When a table is better than a chart
+
+Charts are not always the answer. Use a table when readers need exact values, detailed records, or many fields at once.
+
+Use a chart when:
+
+- You need to show a pattern, trend, comparison, distribution, or relationship.
+- The exact value is less important than the overall message.
+- You want readers to spot exceptions quickly.
+
+Use a table when:
+
+- Readers need exact dollar amounts, IDs, dates, or names.
+- There are only a few values and a chart would add clutter.
+- You need to audit individual records.
+- You need to show many columns of detail.
+
+A strong report often uses both: a chart to identify the issue and a table to show the records behind it.
+
+## 30.24 From question to final chart: a complete mini-example
+
+Business question: "Which customers are driving over-budget actuals, and is the issue common or caused by a few orders?"
+
+Step 1: start with order-level data and calculate the needed fields.
+
+```python
+orders = pd.DataFrame({
+    "Reference": ["R001", "R002", "R003", "R004", "R005", "R006"],
+    "Customer": ["North Co", "North Co", "West Shop", "West Shop", "Online", "North Co"],
+    "Budgeted": [500, 750, 300, 1000, 250, 400],
+    "Actual": [400, 900, 450, 1200, 250, 390]
+})
+
+orders["Variance"] = orders["Budgeted"] - orders["Actual"]
+orders["Over_Budget"] = orders["Variance"] < 0
+orders["Over_Budget_Amount"] = orders["Variance"].abs().where(orders["Over_Budget"], 0)
+```
+
+Step 2: summarize by customer.
+
+```python
+customer_risk = (
+    orders.groupby("Customer", as_index=False)
+          .agg(
+              Orders=("Reference", "nunique"),
+              Over_Budget_Orders=("Over_Budget", "sum"),
+              Total_Over_Budget=("Over_Budget_Amount", "sum")
+          )
+)
+
+customer_risk["Over_Budget_Rate"] = (
+    customer_risk["Over_Budget_Orders"] / customer_risk["Orders"]
+)
+```
+
+Step 3: chart the total over-budget amount.
+
+```python
+plot_data = customer_risk.sort_values("Total_Over_Budget", ascending=True)
+
+ax = plot_data.plot(x="Customer", y="Total_Over_Budget", kind="barh", legend=False)
+ax.set_title("Total Over-Budget Amount by Customer")
+ax.set_xlabel("Over-Budget Amount ($)")
+ax.set_ylabel("Customer")
+plt.tight_layout()
+plt.show()
+```
+
+Step 4: interpret with both amount and frequency.
+
+```python
+customer_risk.sort_values("Total_Over_Budget", ascending=False)
+```
+
+Interpretation:
+
+- `Total_Over_Budget` shows where the largest dollar risk is.
+- `Over_Budget_Orders` shows whether many orders are affected.
+- `Over_Budget_Rate` shows whether over-budget records are common for that customer.
+- A customer with one very large over-budget order may need a different response than a customer with many smaller over-budget orders.
 
 ---
 
