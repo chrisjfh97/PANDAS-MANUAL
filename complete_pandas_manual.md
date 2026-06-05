@@ -397,6 +397,22 @@ pandas.core.frame.DataFrame
 
 This matters because Series and DataFrames have different shapes and sometimes behave differently.
 
+Use double square brackets when you want to keep table shape:
+
+```python
+orders_only = df[["Orders"]]                 # one-column DataFrame
+report = df[["Employee", "Orders"]]         # selected columns, in this order
+```
+
+Common reasons to use double brackets:
+
+- You are selecting two or more columns.
+- You want one selected column to remain a DataFrame instead of becoming a Series.
+- A later pandas method, chart, export, or machine-learning tool expects a two-dimensional table.
+- You want to reorder columns by writing the desired column order inside the inner list.
+
+Think of `df["Orders"]` as "give me this one column as a Series" and `df[["Orders", "Employee"]]` as "give me a smaller DataFrame containing these columns."
+
 ---
 
 # 6. Creating DataFrames
@@ -1094,6 +1110,14 @@ Use `~` for NOT.
 not_correct = df[~(df["Status"] == "On Budget")]
 ```
 
+You may also see `.ne()`, which means "not equal":
+
+```python
+not_on_budget = df[df["Status"].ne("On Budget")]
+```
+
+This is the same idea as `df["Status"] != "On Budget"`. Some people prefer `.ne()` in chains because it reads like a method. The related `.eq()` method means "equals" and is similar to `==`.
+
 ## 10.5 Filter with `isin`
 
 ```python
@@ -1124,6 +1148,8 @@ Rows where Status is not missing:
 ```python
 known_status = df[df["Status"].notna()]
 ```
+
+`.notna()` is the opposite of `.isna()`. Use it when blanks would break a calculation, when you only want completed records, or before filtering text/numbers in a column that may contain missing values.
 
 ## 10.8 Query syntax
 
@@ -1429,7 +1455,20 @@ Now Order becomes the row label.
 df = df.reset_index()
 ```
 
-This converts the index back into a normal column.
+This converts the index back into a normal column. It is not mandatory. Use it when the index contains information you want to treat like regular data.
+
+Common reasons to use `reset_index()`:
+
+- After `groupby`, the grouping labels may become the index; resetting makes them normal columns for exporting, merging, or charting.
+- After filtering or sorting, the row index may have gaps such as `0, 3, 7`; resetting can create a clean `0, 1, 2` index.
+- Some functions and readers expect important identifiers to be columns, not hidden in the index.
+- Before saving to Excel or CSV, you may want to decide clearly whether the index should be included.
+
+If the current index is meaningless and you do not want to keep it as a column, use:
+
+```python
+df = df.reset_index(drop=True)
+```
 
 ## 12.3 Why index matters
 
@@ -1625,11 +1664,23 @@ Use this carefully. Filling financial values with mean or median can distort tot
 df_clean = df.dropna()
 ```
 
+By default, `dropna()` removes a row if any column in that row is missing. That can be too aggressive when only a few columns are required for the analysis.
+
 Drop only if specific columns are missing:
 
 ```python
 df_clean = df.dropna(subset=["Order", "Budgeted", "Actual"])
 ```
+
+Here, `subset` means "only check these columns when deciding what to drop." Use `subset` when some columns are required and other columns are optional.
+
+Drop rows only when the entire row is blank:
+
+```python
+df_clean = df.dropna(how="all")
+```
+
+`how="all"` means "drop the row only if all checked values are missing." This is useful for removing blank spacer rows from Excel exports without deleting partially completed records. `how="any"` is the default and means "drop if any checked value is missing." Use lowercase `"all"`; `"All"` is not the standard pandas option.
 
 ## 14.6 Drop columns with too many missing values
 
@@ -1640,6 +1691,13 @@ df = df.dropna(axis=1, thresh=threshold)
 ```
 
 This keeps columns that have at least 70% non-missing values.
+
+`axis` tells pandas which direction to work across:
+
+- `axis=0` means operate on rows. This is the default for `dropna()`.
+- `axis=1` means operate on columns. In this example, pandas drops columns that do not meet the threshold.
+
+A quick memory trick: rows are axis `0`, columns are axis `1`.
 
 ---
 
@@ -2038,9 +2096,30 @@ def create_note(row):
 df["Note"] = df.apply(create_note, axis=1)
 ```
 
+`axis=1` tells `apply` to send one row at a time into the function. Without `axis=1`, pandas applies the function column-by-column (`axis=0`).
+
 Row-wise `apply` is flexible but slower than vectorized logic.
 
-## 19.6 When to use each
+## 19.6 Lambda functions in pandas examples
+
+A `lambda` is a small unnamed function. It is often used when the function is short enough that creating a separate `def` function would feel unnecessary.
+
+These two examples do the same thing:
+
+```python
+def calculate_variance(row):
+    return row["Budgeted"] - row["Actual"]
+
+df["Variance"] = df.apply(calculate_variance, axis=1)
+```
+
+```python
+df["Variance"] = df.apply(lambda row: row["Budgeted"] - row["Actual"], axis=1)
+```
+
+Read `lambda row: row["Budgeted"] - row["Actual"]` as "for each row, return Budgeted minus Actual." Lambdas are convenient in examples, but a named function is better when the logic is long, reused, or needs comments.
+
+## 19.7 When to use each
 
 | Task | Recommended tool |
 |---|---|
@@ -2208,7 +2287,7 @@ Output:
 2    Maria            30            30.0         4000         4000.0
 ```
 
-This is one of the most useful pandas patterns.
+This is one of the most useful pandas patterns. The `.reset_index()` at the end turns `Reviewer` back into a normal column. Without it, `Reviewer` would be stored as the index, which is fine for some calculations but less convenient for merging, exporting, or selecting columns with double brackets.
 
 ## 20.4 Group and count rows
 
@@ -6357,7 +6436,7 @@ df = (
 )
 ```
 
-The `lambda d:` receives the DataFrame as it exists at that step.
+The `lambda d:` receives the DataFrame as it exists at that step. In this context, `lambda` is just a short function written inline. It lets `assign` calculate a new column from the current version of the DataFrame without breaking the chain into separate steps.
 
 ## 34.4 `pipe`
 
@@ -7873,8 +7952,8 @@ df = df.drop(columns=["UnusedColumn"])
 ```python
 df.isna().sum()
 df[df["Amount"].isna()]
-df = df.dropna(how="all")
-df = df.dropna(subset=["Customer", "Amount"])
+df = df.dropna(how="all")              # remove rows that are completely blank
+df = df.dropna(subset=["Customer", "Amount"])  # only check required columns
 df["Amount"] = df["Amount"].fillna(0)
 df["Status"] = df["Status"].fillna("Unknown")
 df["Amount"] = df["Amount"].ffill()
@@ -7927,7 +8006,7 @@ df["Risk"] = np.select(
     default="Low"
 )
 
-df = df.assign(Net=lambda x: x["Revenue"] - x["Cost"])
+df = df.assign(Net=lambda x: x["Revenue"] - x["Cost"])  # lambda is a short inline function
 ```
 
 ## Group and aggregate
