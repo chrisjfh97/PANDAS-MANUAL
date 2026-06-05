@@ -1941,6 +1941,8 @@ Use cases:
 
 ## 26.3 Mean
 
+![Mean, Median, and Mode](pandas_manual_assets/stats_mean_median_mode.svg)
+
 Mean is the average.
 
 Formula concept:
@@ -2097,6 +2099,8 @@ If average sales amount is `$1,000` and standard deviation is `$900`, values are
 
 ## 26.10 Percentiles and quantiles
 
+![Box Plot Quartiles](pandas_manual_assets/plot_boxplot_quartiles_outliers.svg)
+
 A percentile tells you the value below which a percentage of data falls.
 
 ```python
@@ -2160,6 +2164,8 @@ Interpretation:
 
 ## 26.14 Correlation
 
+![Correlation Heatmap](pandas_manual_assets/plot_correlation_heatmap.svg)
+
 Correlation measures how two numeric columns move together.
 
 ```python
@@ -2191,6 +2197,8 @@ Interpretation:
 - Covariance is harder to interpret than correlation because it depends on units.
 
 ## 26.16 Skewness
+
+![Histogram Distribution](pandas_manual_assets/plot_histogram_distribution.svg)
 
 Skewness measures whether a distribution leans left or right.
 
@@ -2257,6 +2265,8 @@ Interpretation:
 
 ## 27.1 Mean vs median
 
+![Mean vs Median with Outlier](pandas_manual_assets/stats_mean_median_mode.svg)
+
 Mean and median answer different questions.
 
 | Statistic | Question it answers | Best when |
@@ -2321,6 +2331,8 @@ If the 90th percentile is `$5,000`, that means 90% of records are at or below `$
 
 ## 27.5 Outlier interpretation
 
+![Box Plot Outliers](pandas_manual_assets/plot_boxplot_quartiles_outliers.svg)
+
 An outlier is unusual, not automatically wrong.
 
 Examples of valid outliers:
@@ -2338,6 +2350,8 @@ Examples of suspicious outliers:
 - Unit count extremely high because of data entry error.
 
 ## 27.6 Correlation interpretation
+
+![Correlation Heatmap](pandas_manual_assets/plot_correlation_heatmap.svg)
 
 Example:
 
@@ -2576,6 +2590,8 @@ How to read it:
 
 ## 29.3 Horizontal bar plot
 
+![Horizontal Bar Plot](pandas_manual_assets/plot_horizontal_bar_profit.svg)
+
 ```python
 ax = df.plot(x="Month", y="Profit", kind="barh")
 ax.set_title("Profit by Month")
@@ -2588,6 +2604,8 @@ Use horizontal bars when category labels are long.
 
 ## 29.4 Histogram
 
+![Histogram](pandas_manual_assets/plot_histogram_distribution.svg)
+
 ```python
 ax = df["Orders"].plot(kind="hist", bins=5, edgecolor="black")
 ax.set_title("Distribution of Order Counts")
@@ -2598,6 +2616,8 @@ plt.show()
 Use a histogram to understand how values are distributed.
 
 ## 29.5 Box plot
+
+![Box Plot](pandas_manual_assets/plot_boxplot_quartiles_outliers.svg)
 
 ```python
 ax = df[["Revenue", "Cost", "Profit"]].plot(kind="box")
@@ -2681,6 +2701,8 @@ Avoid pie charts when:
 
 ## 29.9 Density plot
 
+![Density Plot](pandas_manual_assets/plot_density_profit.svg)
+
 ```python
 ax = df["Profit"].plot(kind="kde")
 ax.set_title("Profit Density")
@@ -2690,6 +2712,8 @@ plt.show()
 A density plot is a smooth estimate of distribution. It is useful for seeing shape, but it can be less intuitive than a histogram for beginners.
 
 ## 29.10 Correlation heatmap without seaborn
+
+![Correlation Heatmap](pandas_manual_assets/plot_correlation_heatmap.svg)
 
 ```python
 corr = df[["Revenue", "Cost", "Profit", "Orders"]].corr()
@@ -2732,6 +2756,8 @@ Clear labels are not cosmetic. They make the chart understandable.
 
 ## 29.13 Add reference lines and annotations
 
+![Reference Line and Annotation](pandas_manual_assets/plot_reference_annotation.svg)
+
 Reference lines help readers compare values to a target, average, budget, or threshold. An annotation calls attention to one important point.
 
 ```python
@@ -2756,6 +2782,8 @@ plt.show()
 Use reference lines when the reader needs to know whether a value is above or below a standard. Use annotations sparingly; too many notes make the chart harder to read.
 
 ## 29.14 Format numbers for readable charts
+
+![Formatted Revenue Chart](pandas_manual_assets/plot_formatted_revenue.svg)
 
 Large numbers and percentages should be formatted so the reader does not have to mentally decode them.
 
@@ -2786,6 +2814,8 @@ plt.show()
 
 ## 29.15 Plot grouped summaries from pandas
 
+![Grouped Summary Plot](pandas_manual_assets/plot_grouped_summary_profit.svg)
+
 Most useful business charts start with a grouped summary rather than raw rows.
 
 ```python
@@ -2805,6 +2835,8 @@ plt.show()
 The chart should match the summary table. If the table says the highest month is June, the tallest bar should also be June. This is a simple but important quality check.
 
 ## 29.16 Small multiples for cleaner comparisons
+
+![Small Multiples Plot](pandas_manual_assets/plot_small_multiples_regions.svg)
 
 A chart with too many lines can become unreadable. Instead, use separate panels with the same scale.
 
@@ -2831,6 +2863,8 @@ Small multiples are useful when each group deserves comparison but putting every
 
 ## 29.17 Sort bars so the message is obvious
 
+![Sorted Horizontal Bars](pandas_manual_assets/plot_sorted_horizontal_bars.svg)
+
 Bar charts are easiest to read when categories are sorted by value, unless the categories already have a natural order such as months, workflow stages, or priority levels.
 
 ```python
@@ -2856,6 +2890,8 @@ Interpretation:
 - Sorting from smallest to largest places the largest bar at the top in many rendered charts, which is often easier for readers.
 
 ## 29.18 Show percentages as a 100% stacked bar
+
+![100 Percent Stacked Bar](pandas_manual_assets/plot_stacked_percent_status.svg)
 
 A regular stacked bar shows total size and category composition. A **100% stacked bar** shows composition only. This is useful when you want to compare percentages across groups even if the groups have different total volumes.
 
@@ -2890,6 +2926,8 @@ How to read it:
 - If total volume also matters, show a count table or a second chart beside it.
 
 ## 29.19 Pareto chart for the biggest contributors
+
+![Pareto Chart](pandas_manual_assets/plot_pareto_issues.svg)
 
 A Pareto chart combines bars and a cumulative-percentage line. It helps answer: "Which few categories explain most of the total?"
 
@@ -2928,6 +2966,8 @@ Interpretation:
 
 ## 29.20 Before-and-after comparison
 
+![Before and After Comparison](pandas_manual_assets/plot_before_after_comparison.svg)
+
 Use a before-and-after chart when you want to show change between two points, such as before and after a process update.
 
 ```python
@@ -2953,6 +2993,8 @@ How to read it:
 - Always state whether higher or lower is better so the reader does not guess.
 
 ## 29.21 Dual-axis charts: use carefully
+
+![Dual Axis Chart](pandas_manual_assets/plot_dual_axis_revenue_orders.svg)
 
 A dual-axis chart uses one y-axis on the left and another y-axis on the right. It can be useful when two measures have very different units, but it can also mislead readers because the line shapes depend on the chosen scales.
 
@@ -2980,6 +3022,8 @@ Use a dual-axis chart only when:
 If the audience may be confused, use two aligned charts instead.
 
 ## 29.22 Plotting missing values intentionally
+
+![Missing Values Gap Plot](pandas_manual_assets/plot_missing_values_gap.svg)
 
 Missing values can create gaps or misleading lines. Decide whether missing means "zero," "not collected," or "not applicable." These are different meanings.
 
@@ -3018,6 +3062,8 @@ Do not fill missing values just to make a chart look smooth. The visual should r
 
 ## 30.1 Line plot
 
+![Line Plot](pandas_manual_assets/plot_line_over_time.svg)
+
 Best for:
 
 - Trends over time.
@@ -3035,6 +3081,8 @@ Look for:
 
 ## 30.2 Bar plot
 
+![Bar Plot](pandas_manual_assets/plot_bar_profit.svg)
+
 Best for:
 
 - Comparing categories.
@@ -3050,6 +3098,8 @@ Look for:
 - Unexpected categories.
 
 ## 30.3 Histogram
+
+![Histogram](pandas_manual_assets/plot_histogram_distribution.svg)
 
 Best for:
 
@@ -3067,6 +3117,8 @@ Look for:
 
 ## 30.4 Box plot
 
+![Box Plot](pandas_manual_assets/plot_boxplot_quartiles_outliers.svg)
+
 Best for:
 
 - Comparing groups.
@@ -3081,6 +3133,8 @@ Look for:
 - Outlier points.
 
 ## 30.5 Scatter plot
+
+![Scatter Plot](pandas_manual_assets/plot_scatter_relationship.svg)
 
 Best for:
 
@@ -3098,6 +3152,8 @@ Look for:
 
 ## 30.6 Pie chart
 
+![Pie Chart](pandas_manual_assets/plot_pie_share.svg)
+
 Best for:
 
 - Simple part-to-whole percentages.
@@ -3111,6 +3167,8 @@ Look for:
 Avoid for detailed comparisons.
 
 ## 30.7 Heatmap
+
+![Correlation Heatmap](pandas_manual_assets/plot_correlation_heatmap.svg)
 
 Best for:
 
@@ -3301,6 +3359,8 @@ Interpretation:
 
 ## 30.17 Reading trends over time
 
+![Line Plot for Reading Trends](pandas_manual_assets/plot_line_over_time.svg)
+
 A time chart should usually be read in layers:
 
 1. **Overall direction:** is the line generally rising, falling, or flat?
@@ -3332,6 +3392,8 @@ Interpretation:
 - `rolling(3).mean()` smooths short-term noise so the broader trend is easier to see.
 
 ## 30.18 Reading category comparisons
+
+![Sorted Horizontal Bars for Category Comparison](pandas_manual_assets/plot_sorted_horizontal_bars.svg)
 
 When comparing categories, ask whether the chart shows total volume, average performance, or share of total.
 
@@ -3366,6 +3428,8 @@ Interpretation checklist:
 
 ## 30.19 Reading distributions without advanced math
 
+![Box Plot for Distribution Reading](pandas_manual_assets/plot_boxplot_quartiles_outliers.svg)
+
 A distribution shows how values are spread across low, middle, and high ranges. You do not need advanced math to read one.
 
 Ask these questions:
@@ -3391,6 +3455,8 @@ df["Processing_Days"].describe(percentiles=[0.25, 0.5, 0.75, 0.9, 0.95])
 The 90th or 95th percentile can be useful in business reports because it answers, "How high are the unusually high but still common-enough values?"
 
 ## 30.20 Reading relationships without assuming causation
+
+![Scatter Plot for Relationship Reading](pandas_manual_assets/plot_scatter_relationship.svg)
 
 Scatter plots and correlations can show that two numeric measures move together, but they do not prove cause and effect.
 
@@ -3495,6 +3561,8 @@ Use a table when:
 A strong report often uses both: a chart to identify the issue and a table to show the records behind it.
 
 ## 30.24 From question to final chart: a complete mini-example
+
+![Over-Budget Amount by Customer](pandas_manual_assets/plot_over_budget_customer.svg)
 
 Business question: "Which customers are driving over-budget actuals, and is the issue common or caused by a few orders?"
 
