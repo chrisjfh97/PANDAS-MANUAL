@@ -242,6 +242,252 @@ def save_pie() -> None:
     svg.save("plot_pie_share.svg")
 
 
+def save_horizontal_bar_plot() -> None:
+    svg = SVG("Horizontal Profit by Month")
+    left, top, right, bottom = chart_frame(svg)
+    months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun"]
+    profits = [4500, 5000, 6100, 5700, 7100, 7900]
+    max_profit = 8500
+    bar_h = (bottom - top) / len(profits) - 12
+    for i, (month, profit) in enumerate(zip(months, profits)):
+        y = top + i * (bottom - top) / len(profits) + 8
+        width = (profit / max_profit) * (right - left)
+        svg.add(f'<rect x="{left}" y="{y:.1f}" width="{width:.1f}" height="{bar_h:.1f}" fill="{COLORS["green"]}"/>')
+        svg.text(left - 18, y + bar_h / 2 + 5, month, "small", "end")
+        svg.text(left + width + 8, y + bar_h / 2 + 5, f"${profit:,}", "small")
+    svg.text(450, 508, "Profit", "small", "middle")
+    svg.save("plot_horizontal_bar_profit.svg")
+
+
+def save_density_plot() -> None:
+    svg = SVG("Profit Density")
+    area = chart_frame(svg)
+    left, top, right, bottom = area
+    pts = []
+    for i in range(80):
+        x = left + i * (right - left) / 79
+        t = -3 + i * 6 / 79
+        yval = math.exp(-0.5 * t * t)
+        pts.append((x, bottom - yval * (bottom - top) * 0.85))
+    fill_path = line_path(pts) + f" L {right} {bottom} L {left} {bottom} Z"
+    svg.add(f'<path d="{fill_path}" fill="{COLORS["light_blue"]}" fill-opacity="0.7"/>')
+    svg.add(f'<path d="{line_path(pts)}" fill="none" stroke="{COLORS["blue"]}" stroke-width="4"/>')
+    svg.text(450, 508, "Profit values", "small", "middle")
+    svg.save("plot_density_profit.svg")
+
+
+def save_reference_annotation_plot() -> None:
+    svg = SVG("Profit Compared with Average")
+    left, top, right, bottom = chart_frame(svg)
+    profits = [4500, 5000, 6100, 5700, 7100, 7900]
+    months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun"]
+    avg = sum(profits) / len(profits)
+    avg_y = y_scale(avg, top, bottom, 0, 8500)
+    svg.add(f'<line x1="{left}" y1="{avg_y:.1f}" x2="{right}" y2="{avg_y:.1f}" stroke="{COLORS["red"]}" stroke-width="4" stroke-dasharray="10 8"/>')
+    svg.text(right - 10, avg_y - 10, "Average", "small", "end", COLORS["red"])
+    for i, profit in enumerate(profits):
+        x = left + i * (right - left) / len(profits) + 12
+        width = (right - left) / len(profits) - 24
+        y = y_scale(profit, top, bottom, 0, 8500)
+        color = COLORS["orange"] if profit == max(profits) else COLORS["green"]
+        svg.add(f'<rect x="{x:.1f}" y="{y:.1f}" width="{width:.1f}" height="{bottom - y:.1f}" fill="{color}"/>')
+        svg.text(x + width / 2, bottom + 28, months[i], "small", "middle")
+    svg.add(f'<line x1="715" y1="135" x2="785" y2="112" stroke="{COLORS["axis"]}" stroke-width="3" marker-end="url(#arrow)"/>')
+    svg.text(596, 140, "Highest profit", "small")
+    svg.save("plot_reference_annotation.svg")
+
+
+def save_formatted_revenue_plot() -> None:
+    svg = SVG("Revenue by Month with Dollar Labels")
+    area = chart_frame(svg)
+    values = [12500, 13200, 15100, 14800, 17400, 18900]
+    months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun"]
+    pts = points(values, area, 0, 20000)
+    svg.add(f'<path d="{line_path(pts)}" fill="none" stroke="{COLORS["blue"]}" stroke-width="4"/>')
+    for (x, y), value in zip(pts, values):
+        svg.add(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="7" fill="{COLORS["blue"]}"/>')
+        svg.text(x, y - 12, f"${value/1000:.1f}k", "small", "middle")
+    left, _, right, bottom = area
+    for i, month in enumerate(months):
+        svg.text(left + i * (right - left) / 5, bottom + 28, month, "small", "middle")
+    svg.save("plot_formatted_revenue.svg")
+
+
+def save_grouped_summary_plot() -> None:
+    svg = SVG("Total Profit by Month")
+    # Create a grouped-summary asset with labels emphasizing summarized data.
+    left, top, right, bottom = chart_frame(svg)
+    profits = [4500, 5000, 6100, 5700, 7100, 7900]
+    orders = [40, 45, 50, 48, 56, 61]
+    months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun"]
+    for i, (profit, order_count) in enumerate(zip(profits, orders)):
+        x = left + i * (right - left) / len(profits) + 12
+        width = (right - left) / len(profits) - 24
+        y = y_scale(profit, top, bottom, 0, 8500)
+        svg.add(f'<rect x="{x:.1f}" y="{y:.1f}" width="{width:.1f}" height="{bottom - y:.1f}" fill="{COLORS["teal"]}"/>')
+        svg.text(x + width / 2, y - 8, f"{order_count} orders", "small", "middle")
+        svg.text(x + width / 2, bottom + 28, months[i], "small", "middle")
+    svg.save("plot_grouped_summary_profit.svg")
+
+
+def save_small_multiples_plot() -> None:
+    svg = SVG("Small Multiples by Region")
+    panels = [(80, 110, 410, 450, "East", [40, 45, 50, 48]), (500, 110, 830, 450, "West", [30, 42, 44, 52])]
+    months = ["Jan", "Feb", "Mar", "Apr"]
+    for left, top, right, bottom, region, vals in panels:
+        svg.add(f'<rect x="{left}" y="{top}" width="{right-left}" height="{bottom-top}" fill="none" stroke="{COLORS["grid"]}"/>')
+        svg.add(f'<line x1="{left}" y1="{bottom}" x2="{right}" y2="{bottom}" stroke="{COLORS["axis"]}" stroke-width="2"/>')
+        svg.add(f'<line x1="{left}" y1="{top}" x2="{left}" y2="{bottom}" stroke="{COLORS["axis"]}" stroke-width="2"/>')
+        area = (left, top, right, bottom)
+        pts = points(vals, area, 0, 60)
+        svg.add(f'<path d="{line_path(pts)}" fill="none" stroke="{COLORS["purple"]}" stroke-width="4"/>')
+        for x, y in pts:
+            svg.add(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="6" fill="{COLORS["purple"]}"/>')
+        svg.text((left+right)/2, top-20, region, "label", "middle")
+        for i, month in enumerate(months):
+            svg.text(left + i * (right - left) / 3, bottom+28, month, "small", "middle")
+    svg.save("plot_small_multiples_regions.svg")
+
+
+def save_sorted_bars_plot() -> None:
+    svg = SVG("Sorted Customer Actual Amount")
+    left, top, right, bottom = chart_frame(svg)
+    data = [("Online", 950), ("South LLC", 1800), ("North Co", 2200), ("West Shop", 3400)]
+    max_value = 3600
+    bar_h = (bottom - top) / len(data) - 18
+    for i, (customer, value) in enumerate(data):
+        y = top + i * (bottom - top) / len(data) + 10
+        width = value / max_value * (right - left)
+        color = COLORS["orange"] if value == max(v for _, v in data) else COLORS["blue"]
+        svg.add(f'<rect x="{left}" y="{y:.1f}" width="{width:.1f}" height="{bar_h:.1f}" fill="{color}"/>')
+        svg.text(left - 16, y + bar_h / 2 + 5, customer, "small", "end")
+        svg.text(left + width + 8, y + bar_h / 2 + 5, f"${value:,}", "small")
+    svg.save("plot_sorted_horizontal_bars.svg")
+
+
+def save_stacked_percent_plot() -> None:
+    svg = SVG("Order Status Mix by Region")
+    left, top, right, bottom = chart_frame(svg)
+    regions = ["East", "West", "South"]
+    rows = [(90, 10, 5), (50, 25, 10), (40, 5, 5)]
+    colors = [COLORS["green"], COLORS["orange"], COLORS["purple"]]
+    labels = ["On Time", "Late", "Review"]
+    bar_w = 120
+    for i, (region, row) in enumerate(zip(regions, rows)):
+        x = left + 120 + i * 210
+        y_cursor = bottom
+        total = sum(row)
+        for val, color in zip(row, colors):
+            h = val / total * (bottom - top)
+            y_cursor -= h
+            svg.add(f'<rect x="{x}" y="{y_cursor:.1f}" width="{bar_w}" height="{h:.1f}" fill="{color}" stroke="white"/>')
+        svg.text(x + bar_w / 2, bottom + 28, region, "small", "middle")
+    legend(svg, list(zip(labels, colors)), 650, 105)
+    svg.text(50, 100, "100%", "small")
+    svg.text(62, 470, "0%", "small")
+    svg.save("plot_stacked_percent_status.svg")
+
+
+def save_pareto_plot() -> None:
+    svg = SVG("Pareto Chart of Issue Types")
+    left, top, right, bottom = chart_frame(svg)
+    labels = ["Missing", "Price", "Late", "Duplicate", "Other"]
+    counts = [42, 30, 18, 7, 5]
+    total = sum(counts)
+    cumulative = []
+    running = 0
+    for c in counts:
+        running += c
+        cumulative.append(running / total)
+    for i, count in enumerate(counts):
+        x = left + i * (right - left) / len(counts) + 18
+        width = (right - left) / len(counts) - 36
+        y = y_scale(count, top, bottom, 0, 45)
+        svg.add(f'<rect x="{x:.1f}" y="{y:.1f}" width="{width:.1f}" height="{bottom - y:.1f}" fill="{COLORS["blue"]}"/>')
+        svg.text(x + width / 2, bottom + 28, labels[i], "small", "middle")
+    pts = [(left + i * (right - left) / (len(counts) - 1), y_scale(p, top, bottom, 0, 1)) for i, p in enumerate(cumulative)]
+    svg.add(f'<path d="{line_path(pts)}" fill="none" stroke="{COLORS["orange"]}" stroke-width="4"/>')
+    for x, y in pts:
+        svg.add(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="7" fill="{COLORS["orange"]}"/>')
+    svg.text(800, 105, "Cumulative %", "small", "end", COLORS["orange"])
+    svg.save("plot_pareto_issues.svg")
+
+
+def save_before_after_plot() -> None:
+    svg = SVG("Before-and-After Process Comparison")
+    left, top, right, bottom = chart_frame(svg)
+    data = [("Avg Days", 8.5, 5.2), ("Late Orders", 32, 18), ("Manual Reviews", 45, 29)]
+    group_w = (right - left) / len(data)
+    for i, (label, before, after) in enumerate(data):
+        x0 = left + i * group_w + 30
+        for j, (value, color) in enumerate([(before, COLORS["muted"]), (after, COLORS["green"])]):
+            x = x0 + j * 50
+            y = y_scale(value, top, bottom, 0, 50)
+            svg.add(f'<rect x="{x:.1f}" y="{y:.1f}" width="42" height="{bottom - y:.1f}" fill="{color}"/>')
+        svg.text(x0 + 46, bottom + 28, label, "small", "middle")
+    legend(svg, [("Before", COLORS["muted"]), ("After", COLORS["green"])])
+    svg.save("plot_before_after_comparison.svg")
+
+
+def save_dual_axis_plot() -> None:
+    svg = SVG("Revenue and Orders by Month")
+    left, top, right, bottom = chart_frame(svg)
+    revenue = [12500, 13200, 15100, 14800, 17400, 18900]
+    orders = [40, 45, 50, 48, 56, 61]
+    months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun"]
+    for i, val in enumerate(revenue):
+        x = left + i * (right - left)/len(revenue) + 12
+        width = (right - left)/len(revenue) - 24
+        y = y_scale(val, top, bottom, 0, 20000)
+        svg.add(f'<rect x="{x:.1f}" y="{y:.1f}" width="{width:.1f}" height="{bottom - y:.1f}" fill="{COLORS["light_blue"]}"/>')
+        svg.text(x + width / 2, bottom+28, months[i], "small", "middle")
+    pts = points(orders, (left, top, right, bottom), 0, 70)
+    svg.add(f'<path d="{line_path(pts)}" fill="none" stroke="{COLORS["orange"]}" stroke-width="4"/>')
+    for x, y in pts:
+        svg.add(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="7" fill="{COLORS["orange"]}"/>')
+    svg.text(100, 82, "Left axis: revenue", "small", color=COLORS["blue"])
+    svg.text(730, 82, "Right axis: orders", "small", color=COLORS["orange"])
+    svg.save("plot_dual_axis_revenue_orders.svg")
+
+
+def save_missing_values_plot() -> None:
+    svg = SVG("Monthly Value with Missing March Data")
+    area = chart_frame(svg)
+    months = ["Jan", "Feb", "Mar", "Apr", "May"]
+    vals = [100, 120, None, 150, 160]
+    left, top, right, bottom = area
+    pts = []
+    for i, val in enumerate(vals):
+        x = left + i * (right - left)/(len(vals)-1)
+        if val is None:
+            svg.add(f'<line x1="{x}" y1="{top}" x2="{x}" y2="{bottom}" stroke="{COLORS["red"]}" stroke-width="3" stroke-dasharray="8 8"/>')
+            svg.text(x, top + 24, "Missing", "small", "middle", COLORS["red"])
+            pts.append(None)
+        else:
+            pts.append((x, y_scale(val, top, bottom, 80, 170)))
+            svg.add(f'<circle cx="{pts[-1][0]:.1f}" cy="{pts[-1][1]:.1f}" r="7" fill="{COLORS["blue"]}"/>')
+        svg.text(x, bottom + 28, months[i], "small", "middle")
+    for a,b in zip(pts, pts[1:]):
+        if a is not None and b is not None:
+            svg.add(f'<line x1="{a[0]:.1f}" y1="{a[1]:.1f}" x2="{b[0]:.1f}" y2="{b[1]:.1f}" stroke="{COLORS["blue"]}" stroke-width="4"/>')
+    svg.save("plot_missing_values_gap.svg")
+
+
+def save_over_budget_plot() -> None:
+    svg = SVG("Total Over-Budget Amount by Customer")
+    left, top, right, bottom = chart_frame(svg)
+    data = [("Online", 0), ("North Co", 150), ("West Shop", 650)]
+    max_value = 700
+    bar_h = (bottom - top) / len(data) - 20
+    for i, (customer, value) in enumerate(data):
+        y = top + i * (bottom - top) / len(data) + 12
+        width = value / max_value * (right - left)
+        color = COLORS["red"] if value == max(v for _, v in data) else COLORS["orange"]
+        svg.add(f'<rect x="{left}" y="{y:.1f}" width="{width:.1f}" height="{bar_h:.1f}" fill="{color}"/>')
+        svg.text(left - 16, y + bar_h / 2 + 5, customer, "small", "end")
+        svg.text(left + max(width, 4) + 8, y + bar_h / 2 + 5, f"${value:,}", "small")
+    svg.save("plot_over_budget_customer.svg")
+
 def main() -> None:
     ASSET_DIR.mkdir(exist_ok=True)
     save_mean_median_mode()
@@ -253,6 +499,19 @@ def main() -> None:
     save_scatter()
     save_area_plot()
     save_pie()
+    save_horizontal_bar_plot()
+    save_density_plot()
+    save_reference_annotation_plot()
+    save_formatted_revenue_plot()
+    save_grouped_summary_plot()
+    save_small_multiples_plot()
+    save_sorted_bars_plot()
+    save_stacked_percent_plot()
+    save_pareto_plot()
+    save_before_after_plot()
+    save_dual_axis_plot()
+    save_missing_values_plot()
+    save_over_budget_plot()
 
 
 if __name__ == "__main__":

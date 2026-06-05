@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="560" viewBox="0 0 900 560" role="img" aria-labelledby="title desc">
+<title>Monthly Value with Missing March Data</title>
+<desc>Monthly Value with Missing March Data chart for the pandas manual.</desc>
+<rect width="100%" height="100%" fill="white"/>
+<style>text{font-family:Arial,Helvetica,sans-serif;fill:#232323}.title{font-size:30px;font-weight:700}.label{font-size:17px}.small{font-size:14px}.legend{font-size:16px}</style>
+<text class="title" x="450.0" y="48" text-anchor="middle">Monthly Value with Missing March Data</text>
+<line x1="90" y1="470.0" x2="840" y2="470.0" stroke="#e2e8f0"/>
+<line x1="90" y1="394.0" x2="840" y2="394.0" stroke="#e2e8f0"/>
+<line x1="90" y1="318.0" x2="840" y2="318.0" stroke="#e2e8f0"/>
+<line x1="90" y1="242.0" x2="840" y2="242.0" stroke="#e2e8f0"/>
+<line x1="90" y1="166.0" x2="840" y2="166.0" stroke="#e2e8f0"/>
+<line x1="90" y1="90.0" x2="840" y2="90.0" stroke="#e2e8f0"/>
+<line x1="90" y1="90" x2="90" y2="470" stroke="#4b5563" stroke-width="3"/>
+<line x1="90" y1="470" x2="840" y2="470" stroke="#4b5563" stroke-width="3"/>
+<circle cx="90.0" cy="385.6" r="7" fill="#2563eb"/>
+<text class="small" x="90.0" y="498.0" text-anchor="middle">Jan</text>
+<circle cx="277.5" cy="301.1" r="7" fill="#2563eb"/>
+<text class="small" x="277.5" y="498.0" text-anchor="middle">Feb</text>
+<line x1="465.0" y1="90" x2="465.0" y2="470" stroke="#dc2626" stroke-width="3" stroke-dasharray="8 8"/>
+<text class="small" x="465.0" y="114.0" text-anchor="middle" fill="#dc2626">Missing</text>
+<text class="small" x="465.0" y="498.0" text-anchor="middle">Mar</text>
+<circle cx="652.5" cy="174.4" r="7" fill="#2563eb"/>
+<text class="small" x="652.5" y="498.0" text-anchor="middle">Apr</text>
+<circle cx="840.0" cy="132.2" r="7" fill="#2563eb"/>
+<text class="small" x="840.0" y="498.0" text-anchor="middle">May</text>
+<line x1="90.0" y1="385.6" x2="277.5" y2="301.1" stroke="#2563eb" stroke-width="4"/>
+<line x1="652.5" y1="174.4" x2="840.0" y2="132.2" stroke="#2563eb" stroke-width="4"/>
+</svg>
