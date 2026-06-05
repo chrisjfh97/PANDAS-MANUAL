@@ -3845,6 +3845,84 @@ Use this checklist before trusting a chart in a report or presentation:
 
 A chart can be technically correct and still confusing. If a reader cannot explain the main point in one sentence, simplify the chart or add a short interpretation note.
 
+## 28.8 Chart selection decision table
+
+Choose a chart by starting with the question, the field types, and the comparison you want the reader to make.
+
+| Analysis question | Data needed | Strong chart choices | What the reader should learn |
+|---|---|---|---|
+| How did a measure change over time? | Date/time column plus numeric measure | Line chart, area chart | Direction, trend, seasonality, spikes, and drops. |
+| Which category is largest? | Category plus numeric measure | Sorted bar chart, horizontal bar chart | Ranking and size differences. |
+| What share belongs to each category? | Category plus counts or totals | Percentage bar, 100% stacked bar, simple pie only for few categories | Composition of the whole. |
+| What values are typical or unusual? | Numeric column | Histogram, box plot | Distribution, center, spread, skew, and outliers. |
+| Are two numeric measures related? | Two numeric columns | Scatter plot, correlation heatmap for many columns | Direction and strength of relationship. |
+| How do groups compare over time? | Date/time, group, numeric measure | Small multiples, grouped lines, faceted charts | Whether groups follow similar or different patterns. |
+| What causes most of the problem? | Category plus count or total | Pareto chart | The few categories that contribute most. |
+| Did something improve after a change? | Before and after measures | Before/after bars, slope chart, line chart | Size and direction of change. |
+
+## 28.9 Measures, dimensions, and grain
+
+Most chart mistakes come from misunderstanding what each row means. Before building a chart, identify these three ideas:
+
+- **Measure:** the number being summarized, such as `Actual`, `Revenue`, `Orders`, `Profit`, or `Processing_Days`.
+- **Dimension:** the category or time field used to split the measure, such as `Customer`, `Region`, `Month`, `Status`, or `Reviewer`.
+- **Grain:** what one row represents, such as one order, one line item, one customer-month, or one daily total.
+
+Example:
+
+```python
+monthly_customer = df.groupby(["Month", "Customer"], as_index=False).agg(
+    Total_Actual=("Actual", "sum"),
+    Order_Count=("Order", "nunique")
+)
+```
+
+Interpretation:
+
+- `Actual` is the measure.
+- `Month` and `Customer` are dimensions.
+- The summary grain is one row per month per customer.
+
+If the grain is wrong, the chart may double-count records or hide important detail. For example, plotting line-item totals by customer may answer a different question than plotting order totals by customer.
+
+## 28.10 The chart title should contain the answer
+
+A weak title names the chart. A strong title explains the message.
+
+| Weak title | Stronger title |
+|---|---|
+| `Revenue Chart` | `Revenue Increased Each Month from January to June` |
+| `Customer Actuals` | `West Shop Had the Highest Actual Amount` |
+| `Status Mix` | `Late Orders Were Concentrated in the West Region` |
+| `Processing Days` | `Most Orders Finished Within 12 Days, with Three Outliers` |
+
+Use a neutral title when the chart is exploratory. Use an insight title when the chart is part of a report and the evidence supports the conclusion.
+
+## 28.11 When not to make a chart
+
+A chart is not always the best output. Sometimes a table or sentence is clearer.
+
+Use a table instead when:
+
+- The reader needs exact values for many rows.
+- There are many columns that must be compared together.
+- The data is mostly IDs, names, notes, or exceptions.
+- The audience needs to copy values into another process.
+
+Use a sentence instead when:
+
+- There is only one number to report.
+- The conclusion is simple and does not need visual comparison.
+- A chart would add decoration but not understanding.
+
+Example:
+
+```text
+There were 18 late orders in May, representing 6.4% of May orders.
+```
+
+That sentence may be clearer than a chart if no comparison is needed.
+
 ---
 
 # 29. Plotting with pandas and Matplotlib
@@ -4380,6 +4458,213 @@ series_interpolated = series.interpolate()
 ```
 
 Do not fill missing values just to make a chart look smooth. The visual should represent the business truth.
+
+## 29.23 A reusable plotting pattern
+
+Most good pandas charts follow the same pattern:
+
+1. Build a clean summary table.
+2. Sort or reshape the summary for the message.
+3. Plot the summary, not messy raw rows.
+4. Add title, axis labels, units, and formatting.
+5. Write the interpretation.
+
+```python
+summary = (
+    df.groupby("Customer", as_index=False)
+      .agg(Total_Actual=("Actual", "sum"), Orders=("Order", "nunique"))
+      .sort_values("Total_Actual", ascending=False)
+)
+
+ax = summary.head(10).plot(
+    x="Customer",
+    y="Total_Actual",
+    kind="bar",
+    legend=False,
+    color="steelblue"
+)
+
+ax.set_title("Top 10 Customers by Total Actual Amount")
+ax.set_xlabel("Customer")
+ax.set_ylabel("Actual Amount ($)")
+plt.xticks(rotation=45, ha="right")
+plt.tight_layout()
+plt.show()
+```
+
+Quality check:
+
+```python
+summary.head(10)
+```
+
+Always inspect the summary table behind the chart. If the table is wrong, the chart will also be wrong.
+
+## 29.24 Wide data vs long data for plotting
+
+pandas can plot both wide and long data, but each shape is useful for different tasks.
+
+Wide data has one column per measure or group:
+
+```python
+wide = pd.DataFrame({
+    "Month": ["Jan", "Feb", "Mar"],
+    "Revenue": [12500, 13200, 15100],
+    "Cost": [8000, 8200, 9000]
+})
+
+wide.plot(x="Month", y=["Revenue", "Cost"], kind="line")
+```
+
+Long data has one row per measure or group:
+
+```python
+long = wide.melt(
+    id_vars="Month",
+    value_vars=["Revenue", "Cost"],
+    var_name="Measure",
+    value_name="Amount"
+)
+```
+
+Long data is often better for filtering, grouping, and using libraries that expect tidy data. Wide data is often convenient for quick pandas plots with multiple lines or bars.
+
+## 29.25 Grouped bar charts
+
+Use grouped bars when you need to compare categories inside another category.
+
+```python
+status_by_region = pd.DataFrame({
+    "Region": ["East", "West", "South"],
+    "On_Time": [90, 50, 40],
+    "Late": [10, 25, 5]
+}).set_index("Region")
+
+ax = status_by_region.plot(kind="bar")
+ax.set_title("On-Time and Late Orders by Region")
+ax.set_xlabel("Region")
+ax.set_ylabel("Order Count")
+plt.xticks(rotation=0)
+plt.tight_layout()
+plt.show()
+```
+
+Interpretation:
+
+- Compare bars within each region to understand status mix.
+- Compare the same color across regions to understand where each status is highest.
+- If there are too many statuses or regions, use a table, small multiples, or a heatmap instead.
+
+## 29.26 Date axes and time order
+
+Time charts should be sorted by actual dates, not alphabetic month names.
+
+```python
+daily = pd.DataFrame({
+    "Date": pd.to_datetime(["2026-01-03", "2026-01-01", "2026-01-02"]),
+    "Orders": [82, 75, 79]
+}).sort_values("Date")
+
+ax = daily.plot(x="Date", y="Orders", kind="line", marker="o")
+ax.set_title("Daily Orders")
+ax.set_xlabel("Date")
+ax.set_ylabel("Orders")
+plt.tight_layout()
+plt.show()
+```
+
+For month names, create a real date or an ordered categorical column so the chart does not sort months alphabetically.
+
+```python
+month_order = ["Jan", "Feb", "Mar", "Apr", "May", "Jun"]
+df["Month"] = pd.Categorical(df["Month"], categories=month_order, ordered=True)
+df = df.sort_values("Month")
+```
+
+## 29.27 Data labels and annotations
+
+Data labels can help readers, but too many labels create clutter. Label the most important values instead of every value.
+
+```python
+ax = summary.head(10).plot(x="Customer", y="Total_Actual", kind="bar", legend=False)
+ax.set_title("Top 10 Customers by Total Actual Amount")
+ax.set_ylabel("Actual Amount ($)")
+
+largest = summary.head(10).iloc[0]
+ax.annotate(
+    f"Highest: ${largest['Total_Actual']:,.0f}",
+    xy=(0, largest["Total_Actual"]),
+    xytext=(0.5, largest["Total_Actual"] * 1.05),
+    arrowprops={"arrowstyle": "->"}
+)
+
+plt.tight_layout()
+plt.show()
+```
+
+Use annotations for:
+
+- Highest or lowest value.
+- Target misses.
+- Sudden spikes or drops.
+- Known business events.
+- Data-quality warnings.
+
+## 29.28 Color, accessibility, and emphasis
+
+Color should communicate meaning. Do not rely only on red and green because some readers may not distinguish those colors easily.
+
+Practical color rules:
+
+- Use one main color for neutral bars or lines.
+- Use a highlight color only for the item that needs attention.
+- Use consistent colors for the same category across charts.
+- Avoid rainbow palettes for ordered values.
+- Use line style, markers, labels, or annotations in addition to color.
+
+Example highlighting one category:
+
+```python
+colors = ["darkorange" if customer == "West Shop" else "lightgray"
+          for customer in summary["Customer"].head(10)]
+
+ax = summary.head(10).plot(
+    x="Customer",
+    y="Total_Actual",
+    kind="bar",
+    legend=False,
+    color=colors
+)
+ax.set_title("West Shop Had the Highest Actual Amount")
+ax.set_ylabel("Actual Amount ($)")
+plt.tight_layout()
+plt.show()
+```
+
+## 29.29 Saving charts for reports
+
+Use a consistent size, resolution, and file naming pattern when saving charts.
+
+```python
+fig = ax.get_figure()
+fig.savefig(
+    "top_customers_actual_amount.png",
+    dpi=150,
+    bbox_inches="tight",
+    facecolor="white"
+)
+```
+
+Practical tips:
+
+- Use `.png` for reports and slides.
+- Use `.svg` when you need scalable graphics.
+- Use `bbox_inches="tight"` to prevent labels from being cut off.
+- Save the summary table next to the chart when the chart supports a decision.
+
+```python
+summary.to_excel("top_customers_actual_amount_summary.xlsx", index=False)
+```
 
 ---
 
