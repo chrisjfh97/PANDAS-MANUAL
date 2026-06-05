@@ -89,11 +89,17 @@
 37. [Binning, Bucketing, and Segmentation](#37-binning-bucketing-and-segmentation)
 38. [Working with Many Files and JSON](#38-working-with-many-files-and-json)
 
-**[Subpart IV-C: SQL, Reporting, Troubleshooting, and Reference](#subpart-iv-c-sql-reporting-troubleshooting-and-reference)**
+**[Subpart IV-C: SQL Data Access for pandas](#subpart-iv-c-sql-data-access-for-pandas)**
 
 39. [SQL for pandas and Python Data Work](#39-sql-for-pandas-and-python-data-work)
+
+**[Subpart IV-D: Reporting and Troubleshooting](#subpart-iv-d-reporting-and-troubleshooting)**
+
 40. [Styling Tables and Creating Review Outputs](#40-styling-tables-and-creating-review-outputs)
 41. [Common Errors and How to Fix Them](#41-common-errors-and-how-to-fix-them)
+
+**[Subpart IV-E: Quick Reference](#subpart-iv-e-quick-reference)**
+
 42. [Mini Cheat Sheet](#42-mini-cheat-sheet)
 43. [References](#43-references)
 
@@ -6127,7 +6133,7 @@ This is useful in automation because one bad file should not always stop the who
 
 ---
 
-# Subpart IV-C: SQL, Reporting, Troubleshooting, and Reference
+# Subpart IV-C: SQL Data Access for pandas
 
 # 39. SQL for pandas and Python Data Work
 
@@ -6138,6 +6144,8 @@ A strong workflow is:
 1. Use SQL to reduce and shape the data close to the database.
 2. Use pandas to inspect, clean, validate, analyze, visualize, and export the result.
 3. Push cleaned or summarized results back to a database only when that is part of the workflow.
+
+The key idea is that a SQL query is a request. It tells the database **which table or tables to use**, **which columns to return**, **which rows qualify**, and sometimes **how to join, group, sort, or summarize** the result before pandas receives it.
 
 ## 39.1 When to use SQL before pandas
 
@@ -6157,7 +6165,84 @@ Use pandas after SQL when:
 - You need exploratory analysis with quick iterations.
 - You need final validation and exception reporting.
 
-## 39.2 Basic connection patterns
+## 39.2 The basic shape of a SQL query
+
+A beginner-friendly way to read a query is to translate each clause into a sentence.
+
+```sql
+SELECT
+    order_id,
+    customer_id,
+    order_date,
+    amount
+FROM orders
+WHERE order_date >= '2026-01-01'
+ORDER BY order_date DESC
+LIMIT 100;
+```
+
+This means:
+
+| SQL part | Plain-English meaning | Required? |
+|---|---|---|
+| `SELECT` | Which columns should come back? | Usually yes |
+| `FROM` | Which table is the data coming from? | Usually yes |
+| `WHERE` | Which rows should be kept? | Optional, but strongly recommended for large tables |
+| `ORDER BY` | How should the rows be sorted? | Optional |
+| `LIMIT` / `TOP` | How many rows should be returned? | Optional, useful for previews |
+
+For a query that brings data into pandas, the two essential pieces are usually:
+
+1. `SELECT` the columns you need.
+2. `FROM` the table or joined tables that contain those columns.
+
+The other clauses make the result safer and more useful:
+
+- `WHERE` prevents bringing unnecessary rows.
+- `JOIN` adds columns from related tables.
+- `GROUP BY` summarizes many rows into fewer rows.
+- `HAVING` filters grouped summaries.
+- `ORDER BY` makes previews easier to inspect.
+- `LIMIT`, `TOP`, or `FETCH FIRST` keeps test queries small.
+
+SQL keyword order matters. A common full order is:
+
+```sql
+SELECT columns_or_calculations
+FROM table_name
+JOIN other_table ON join_condition
+WHERE row_filter
+GROUP BY grouping_columns
+HAVING grouped_filter
+ORDER BY sort_columns
+LIMIT row_count;
+```
+
+The database does not logically evaluate every part in the same order it is written, but beginners should write queries in this order because it is the standard readable structure.
+
+## 39.3 Start every query by defining the row grain
+
+Before writing SQL, decide what **one row** in the result should represent. This is called the grain.
+
+Examples:
+
+| Desired result | One row should represent | Likely SQL pattern |
+|---|---|---|
+| Order detail extract | One order | `SELECT ... FROM orders WHERE ...` |
+| Order line extract | One product line on one order | `SELECT ... FROM order_lines WHERE ...` |
+| Customer monthly sales | One customer and one month | `GROUP BY customer_id, month` |
+| Open invoice aging | One unpaid invoice | `WHERE paid_date IS NULL` |
+
+If the grain is unclear, pandas work becomes confusing later because totals, counts, and joins may duplicate rows.
+
+Ask these questions before writing the query:
+
+- What is the business object: order, customer, invoice, product, shipment, ticket, or payment?
+- Should the result include detail rows or summarized rows?
+- What date field controls the extract: order date, ship date, invoice date, paid date, or created date?
+- What makes a row unique: `order_id`, `invoice_id`, `customer_id + month`, or another key?
+
+## 39.4 Basic connection patterns
 
 For a local SQLite database, Python's standard library is enough.
 
@@ -6189,7 +6274,34 @@ orders = pd.read_sql_query(
 
 In real projects, do not hard-code passwords in notebooks or scripts. Use environment variables, a secrets manager, or your organization's approved credential tool.
 
-## 39.3 Read SQL with selected columns
+## 39.5 Preview tables and understand schema
+
+Before writing a large query, inspect the available fields. You need to know table names, column names, key columns, and date columns before you can ask for the right data.
+
+```python
+# SQLite example: list tables
+pd.read_sql_query(
+    "SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name",
+    conn
+)
+
+# Preview a table
+pd.read_sql_query("SELECT * FROM orders LIMIT 5", conn)
+```
+
+For production systems, prefer your database catalog, data dictionary, or approved metadata views.
+
+When previewing a table, look for:
+
+- ID columns, such as `order_id`, `customer_id`, or `invoice_id`.
+- Date columns, such as `order_date`, `created_at`, or `paid_date`.
+- Status columns, such as `status`, `is_active`, or `cancelled_flag`.
+- Amount columns, such as `amount`, `quantity`, `unit_price`, or `balance_due`.
+- Columns that look similar but mean different things, such as `created_date` versus `transaction_date`.
+
+A small preview is for understanding shape, not for analysis. Do not assume the first five rows show every possible status, date, or missing-value pattern.
+
+## 39.6 Select columns intentionally
 
 Avoid `SELECT *` for routine work. Bring columns intentionally.
 
@@ -6214,7 +6326,28 @@ Benefits:
 - Fewer confusing duplicate or unused columns.
 - More stable code when the table gains extra columns.
 
-## 39.4 Filter rows in SQL before loading
+A good `SELECT` list normally includes:
+
+- The key column that identifies each row.
+- The date column needed for filtering or time analysis.
+- Business labels needed for grouping, filtering, or reporting.
+- Numeric measures needed for calculations.
+- Audit columns only when you truly need them.
+
+Use aliases when a column name would be unclear in pandas.
+
+```sql
+SELECT
+    order_id,
+    order_date,
+    amount AS order_amount,
+    status AS order_status
+FROM orders;
+```
+
+Aliases are especially helpful after joins because multiple tables often have columns with the same name, such as `created_at`, `status`, or `name`.
+
+## 39.7 Filter rows in SQL before loading
 
 ```python
 query = """
@@ -6234,9 +6367,30 @@ orders = pd.read_sql_query(query, conn, parse_dates=["order_date"])
 
 Filtering in SQL is usually better than loading millions of rows and filtering in pandas afterward.
 
-## 39.5 Use parameters instead of string formatting
+Common `WHERE` patterns:
 
-Do not build SQL by directly inserting user input into a string. Use parameters so values are passed safely.
+| Need | SQL pattern |
+|---|---|
+| Exact match | `WHERE status = 'Open'` |
+| Exclude a value | `WHERE status <> 'Cancelled'` |
+| Date range | `WHERE order_date BETWEEN '2026-01-01' AND '2026-03-31'` |
+| Multiple allowed values | `WHERE status IN ('Open', 'Shipped')` |
+| Missing value | `WHERE paid_date IS NULL` |
+| Not missing | `WHERE paid_date IS NOT NULL` |
+| Text starts with | `WHERE customer_name LIKE 'A%'` |
+| Numeric threshold | `WHERE amount > 0` |
+| Multiple conditions | `WHERE order_date >= '2026-01-01' AND amount > 0` |
+
+Be careful with dates. If a date column includes times, `BETWEEN '2026-01-01' AND '2026-01-31'` may miss records later on January 31 in some databases. A safer timestamp pattern is often:
+
+```sql
+WHERE order_date >= '2026-01-01'
+  AND order_date < '2026-02-01'
+```
+
+## 39.8 Use parameters instead of string formatting
+
+Do not build SQL by directly inserting user input into a string. Use parameters so values are passed safely and the database driver can handle quoting.
 
 ```python
 query = """
@@ -6260,7 +6414,65 @@ orders = pd.read_sql_query(
 
 Different database drivers may use different parameter styles, such as `?`, `%s`, or named parameters. Follow the driver documentation for your database.
 
-## 39.6 Join database tables before pandas
+Parameters are for values, not table names or column names. If a user can choose a table or column, validate the choice against an approved list before building the SQL.
+
+## 39.9 Sort and limit for safe previews
+
+When learning a table or testing a query, return a small result first.
+
+```sql
+SELECT
+    order_id,
+    customer_id,
+    order_date,
+    amount
+FROM orders
+WHERE order_date >= '2026-01-01'
+ORDER BY order_date DESC
+LIMIT 20;
+```
+
+Sorting helps you verify that the newest, oldest, largest, or smallest rows look correct. Limiting prevents a test query from pulling too much data into pandas.
+
+Different databases use different row-limit syntax:
+
+| Database style | Example |
+|---|---|
+| SQLite, PostgreSQL, MySQL | `LIMIT 20` |
+| SQL Server | `SELECT TOP 20 ...` |
+| Standard SQL / Oracle style | `FETCH FIRST 20 ROWS ONLY` |
+
+Do not leave a preview-only `LIMIT` in a production extract unless the business requirement is truly to return only that many rows.
+
+## 39.10 Create calculated columns in SQL
+
+SQL can create simple derived columns before pandas receives the data.
+
+```sql
+SELECT
+    order_id,
+    quantity,
+    unit_price,
+    quantity * unit_price AS line_amount,
+    CASE
+        WHEN quantity * unit_price >= 1000 THEN 'Large'
+        WHEN quantity * unit_price >= 100 THEN 'Medium'
+        ELSE 'Small'
+    END AS order_size
+FROM order_lines;
+```
+
+Use SQL calculations when they are simple, stable, and reduce repeated work. Use pandas when calculations are exploratory, complex, or easier to test step by step.
+
+Common SQL calculations include:
+
+- Renaming columns with `AS`.
+- Arithmetic, such as `quantity * unit_price`.
+- Buckets or labels with `CASE WHEN`.
+- Null handling with functions such as `COALESCE`.
+- Date extraction or truncation, depending on the database.
+
+## 39.11 Join database tables before pandas
 
 If the database already has clean keys and indexes, join there first.
 
@@ -6283,7 +6495,29 @@ orders = pd.read_sql_query(query, conn, parse_dates=["order_date"])
 
 This is similar to `pd.merge`, but the database may be faster and avoids bringing unnecessary lookup tables into Python.
 
-## 39.7 Aggregate in SQL to reduce data volume
+How to think about the join:
+
+- `orders AS o` gives the `orders` table a short alias, `o`.
+- `customers AS c` gives the `customers` table a short alias, `c`.
+- `ON o.customer_id = c.customer_id` tells the database how rows match.
+- `LEFT JOIN` keeps all rows from `orders` even if a matching customer row is missing.
+
+Common join types:
+
+| Join type | What it keeps | Typical use |
+|---|---|---|
+| `LEFT JOIN` | All rows from the left table, matched rows from the right table | Add customer, product, or lookup details to transaction rows |
+| `INNER JOIN` | Only rows that match in both tables | Keep only records with confirmed matches |
+| `FULL OUTER JOIN` | Rows from both sides, matched when possible | Reconciliation work; not supported by every database |
+| `CROSS JOIN` | Every combination of both tables | Rare; can create very large results |
+
+Before joining, check the relationship between keys:
+
+- One order belongs to one customer: many orders to one customer is usually safe.
+- One order has many order lines: joining orders to lines changes the grain from order to order line.
+- If both sides have duplicate keys, the join can multiply rows and inflate totals.
+
+## 39.12 Aggregate in SQL to reduce data volume
 
 If you need a monthly summary, let the database return the monthly summary instead of every transaction.
 
@@ -6303,26 +6537,91 @@ GROUP BY customer_id, strftime('%Y-%m', order_date)
 monthly = pd.read_sql_query(query, conn)
 ```
 
-Date functions differ by database. For example, SQLite uses `strftime`, PostgreSQL uses functions such as `date_trunc`, and SQL Server uses functions such as `DATEFROMPARTS` or `FORMAT` depending on the need.
+`GROUP BY` changes the row grain. In the example above, the result is no longer one row per order. It is one row per customer per month.
 
-## 39.8 Preview tables and understand schema
+Rules of thumb for grouped queries:
 
-Before writing a large query, inspect the available fields.
+- Every non-aggregated column in `SELECT` should usually appear in `GROUP BY`.
+- Aggregated columns use functions such as `COUNT`, `SUM`, `AVG`, `MIN`, or `MAX`.
+- Use `WHERE` to filter detail rows before grouping.
+- Use `HAVING` to filter summary groups after grouping.
 
-```python
-# SQLite example: list tables
-pd.read_sql_query(
-    "SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name",
-    conn
-)
+Example with `HAVING`:
 
-# Preview a table
-pd.read_sql_query("SELECT * FROM orders LIMIT 5", conn)
+```sql
+SELECT
+    customer_id,
+    COUNT(*) AS order_count,
+    SUM(amount) AS total_amount
+FROM orders
+WHERE order_date >= '2026-01-01'
+GROUP BY customer_id
+HAVING SUM(amount) >= 10000;
 ```
 
-For production systems, prefer your database catalog, data dictionary, or approved metadata views.
+Date functions differ by database. For example, SQLite uses `strftime`, PostgreSQL uses functions such as `date_trunc`, and SQL Server uses functions such as `DATEFROMPARTS` or `FORMAT` depending on the need.
 
-## 39.9 Read large SQL results in chunks
+## 39.13 Build queries step by step
+
+Do not start with a large final query. Build it in small checks.
+
+1. Preview the base table.
+2. Select only the columns you need.
+3. Add the date or status filter.
+4. Add joins one at a time.
+5. Check row counts after each join.
+6. Add grouping only after the detail query is correct.
+7. Load into pandas and validate totals, dates, and missing values.
+
+Example development path:
+
+```sql
+-- Step 1: preview
+SELECT *
+FROM orders
+LIMIT 5;
+
+-- Step 2: select required columns
+SELECT order_id, customer_id, order_date, amount
+FROM orders
+LIMIT 20;
+
+-- Step 3: add filters
+SELECT order_id, customer_id, order_date, amount
+FROM orders
+WHERE order_date >= '2026-01-01'
+  AND amount > 0
+LIMIT 20;
+
+-- Step 4: add a lookup join
+SELECT
+    o.order_id,
+    o.customer_id,
+    c.customer_name,
+    o.order_date,
+    o.amount
+FROM orders AS o
+LEFT JOIN customers AS c
+    ON o.customer_id = c.customer_id
+WHERE o.order_date >= '2026-01-01'
+  AND o.amount > 0
+LIMIT 20;
+```
+
+In pandas, validate the result immediately:
+
+```python
+orders = pd.read_sql_query(query, conn, parse_dates=["order_date"])
+
+orders.shape
+orders.head()
+orders.dtypes
+orders["order_id"].duplicated().sum()
+orders["amount"].sum()
+orders["order_date"].min(), orders["order_date"].max()
+```
+
+## 39.14 Read large SQL results in chunks
 
 Use chunks when the result may be too large for memory.
 
@@ -6348,7 +6647,7 @@ summary = (
 
 Chunking is especially useful when you can process each chunk independently and combine small summaries at the end.
 
-## 39.10 Control data types after reading SQL
+## 39.15 Control data types after reading SQL
 
 Database types do not always arrive in pandas exactly how you expect. Check and convert after loading.
 
@@ -6369,7 +6668,7 @@ Common conversions:
 | Codes with leading zeroes | `.astype("string")` |
 | Numeric text | `pd.to_numeric(..., errors="coerce")` |
 
-## 39.11 Write a DataFrame to SQL
+## 39.16 Write a DataFrame to SQL
 
 ```python
 clean_orders.to_sql(
@@ -6390,7 +6689,7 @@ Common `if_exists` options:
 
 Be careful with `replace` in shared databases because it can drop an existing table. In production, write to a staging table first unless you are certain replacement is safe.
 
-## 39.12 Append results safely
+## 39.17 Append results safely
 
 When appending, make sure columns, data types, and grain match the destination table.
 
@@ -6416,7 +6715,7 @@ Good append checks:
 - Confirm date and numeric types are correct.
 - Avoid appending the same extract twice.
 
-## 39.13 Use transactions for write workflows
+## 39.18 Use transactions for write workflows
 
 A transaction helps keep database writes all-or-nothing when the connection and database support it.
 
@@ -6432,20 +6731,23 @@ with conn:
 
 If an error occurs inside the `with conn:` block for SQLite, the transaction is rolled back.
 
-## 39.14 SQL query checklist before loading to pandas
+## 39.19 SQL query checklist before loading to pandas
 
 Before running a query that brings data into pandas, ask:
 
 - What is one row supposed to represent?
+- Which table or tables contain that row?
 - Which columns do I actually need?
 - What date range or business filter should limit the data?
 - Are joins one-to-one, many-to-one, or many-to-many?
 - Could the query create duplicate business keys?
 - Can I aggregate in SQL before loading?
 - Do I need parameters for dates, IDs, or user-provided values?
+- Do I need to preserve IDs as text because of leading zeroes?
 - Will the result fit comfortably in memory?
+- Have I previewed the result and checked row counts before using it in analysis?
 
-## 39.15 SQL-to-pandas troubleshooting
+## 39.20 SQL-to-pandas troubleshooting
 
 | Problem | Likely cause | Fix |
 |---|---|---|
@@ -6454,9 +6756,14 @@ Before running a query that brings data into pandas, ask:
 | Date column is text | Driver did not convert dates | Use `parse_dates` or `pd.to_datetime` |
 | IDs lose leading zeroes | ID was interpreted as numeric | Convert to string and preserve codes as text |
 | Row count is larger than expected | Join duplicated rows | Check key uniqueness before and after the join |
+| Totals are inflated | Query grain changed after joining to a detail table | Re-check join keys and aggregate at the correct grain |
+| Expected rows are missing | `INNER JOIN` removed unmatched records | Try a `LEFT JOIN` and inspect unmatched keys |
+| `NULL` rows do not match a filter | SQL uses `IS NULL`, not `= NULL` | Use `IS NULL` or `IS NOT NULL` |
 | SQL injection risk | Values inserted with f-strings or concatenation | Use query parameters |
 
 ---
+
+# Subpart IV-D: Reporting and Troubleshooting
 
 # 40. Styling Tables and Creating Review Outputs
 
@@ -6658,6 +6965,8 @@ print(filtered["Status"].value_counts(dropna=False))
 Always verify row counts before and after major transformations.
 
 ---
+
+# Subpart IV-E: Quick Reference
 
 # 42. Mini Cheat Sheet
 
