@@ -2786,25 +2786,303 @@ This is very useful for automation scripts that depend on consistent headers.
 
 # 25. Working with Excel Reports
 
-Excel reports often need special handling.
+Excel reports often need special handling because they are usually designed for people first and software second. A workbook may contain title rows, notes, merged cells, blank spacer rows, totals at the bottom, hidden assumptions, multiple tabs, or values that look numeric in Excel but arrive in pandas as text.
 
-## 25.1 Read Excel safely
+This chapter focuses on importing messy Excel reports, cleaning them into analysis-ready DataFrames, and exporting review files that remain easy for Excel users to open.
+
+## 25.1 Start by identifying the real table
+
+Before writing a long cleaning script, answer these questions:
+
+1. Which sheet contains the detail rows?
+2. Which row contains the real column headers?
+3. Are there title, note, or blank rows above the headers?
+4. Are there footnotes, signature lines, or grand totals below the data?
+5. Are IDs, ZIP codes, cost centers, or account numbers supposed to stay as text?
+6. Are money, percent, or date values stored as real Excel values or as formatted text?
+7. Does the report contain multiple repeated sections on one sheet?
+
+A good first step is to read a preview without assuming too much:
+
+```python
+preview = pd.read_excel(
+    "report.xlsx",
+    sheet_name="Summary",
+    header=None,
+    nrows=15
+)
+
+print(preview)
+```
+
+`header=None` tells pandas not to treat the first imported row as column names. This lets you see the worksheet layout and choose the correct import arguments.
+
+## 25.2 Read Excel safely
+
+A safer Excel import is explicit about the sheet, the columns you need, and data types that should not be guessed:
 
 ```python
 df = pd.read_excel(
     "report.xlsx",
     sheet_name="Summary",
-    dtype={"Order": "string", "Member ID": "string"}
+    usecols=["Order", "Member ID", "Budgeted", "Actual", "Order Date"],
+    dtype={"Order": "string", "Member ID": "string"},
+    parse_dates=["Order Date"]
 )
 ```
 
-IDs should often be text, not numbers, because numbers may lose leading zeros.
+IDs should often be text, not numbers, because numeric imports can lose leading zeros or display long identifiers in scientific notation.
 
-## 25.2 Clean Excel column names
+## 25.3 Common `read_excel` import arguments
+
+`pd.read_excel()` accepts many arguments. These are the ones you will use most often with business reports:
+
+| Argument | Use it when | Example |
+|---|---|---|
+| `sheet_name` | You need one sheet, several sheets, or every sheet | `sheet_name="Summary"`, `sheet_name=["Jan", "Feb"]`, `sheet_name=None` |
+| `usecols` | You only want selected columns | `usecols="A:F"`, `usecols=["Order", "Actual"]` |
+| `skiprows` | The top of the sheet has report titles, notes, or blank rows | `skiprows=3`, `skiprows=[0, 2]` |
+| `skipfooter` | The bottom of the sheet has footnotes, approvals, or totals | `skipfooter=2` |
+| `header` | The column names are not on the first imported row | `header=4`, `header=None` |
+| `names` | You want to supply your own column names | `names=["Order", "Actual"]` |
+| `nrows` | You only want the first data rows, often for testing | `nrows=100` |
+| `dtype` | Columns must keep a specific type | `dtype={"Zip": "string"}` |
+| `converters` | A column needs custom cleanup while importing | `converters={"Amount": clean_money}` |
+| `parse_dates` | Date columns should become datetime columns | `parse_dates=["Order Date"]` |
+| `date_format` | Text dates follow a known format | `date_format="%m/%d/%Y"` |
+| `na_values` | Special text should be treated as missing | `na_values=["N/A", "--", "missing"]` |
+| `keep_default_na` | You need to control pandas' default missing-value strings | `keep_default_na=False` |
+| `thousands` | Numbers are stored as text with thousands separators | `thousands=","` |
+| `decimal` | Decimal commas or other decimal markers are used | `decimal=","` |
+| `engine` | You need to choose the Excel-reading backend | `engine="openpyxl"` |
+
+You do not need every argument every time. The practical goal is to describe the report layout clearly enough that pandas imports only the real data.
+
+## 25.4 Skip title rows and footer rows
+
+Many exported reports look like this:
+
+| Row | Contents |
+|---|---|
+| 1 | Company name |
+| 2 | Report title |
+| 3 | Run date |
+| 4 | Blank row |
+| 5 | Real headers |
+| 6+ | Detail rows |
+| Last 2 rows | Notes and approval text |
+
+Use `skiprows` for the top clutter and `skipfooter` for the bottom clutter:
+
+```python
+df = pd.read_excel(
+    "report.xlsx",
+    sheet_name="Detail",
+    skiprows=4,
+    skipfooter=2
+)
+```
+
+This skips the first four worksheet rows, then imports the next row as the header row by default.
+
+If only certain top rows should be skipped, pass a list of zero-based row positions:
+
+```python
+df = pd.read_excel(
+    "report.xlsx",
+    sheet_name="Detail",
+    skiprows=[0, 2]
+)
+```
+
+This skips Excel rows 1 and 3, but keeps Excel row 2.
+
+## 25.5 Choose the correct header row
+
+Sometimes it is clearer to keep the rows but tell pandas which row contains headers:
+
+```python
+df = pd.read_excel(
+    "report.xlsx",
+    sheet_name="Detail",
+    header=4
+)
+```
+
+`header=4` means the fifth imported row becomes the column names because pandas counts from zero.
+
+If the file has no usable header row, import without headers and provide your own names:
+
+```python
+df = pd.read_excel(
+    "report.xlsx",
+    sheet_name="Detail",
+    header=None,
+    names=["Order", "Member ID", "Budgeted", "Actual", "Order Date"]
+)
+```
+
+## 25.6 Import only the rows and columns you need
+
+Importing less data makes scripts faster and reduces cleanup work.
+
+Use Excel-style column letters:
+
+```python
+df = pd.read_excel(
+    "report.xlsx",
+    sheet_name="Detail",
+    usecols="A:F"
+)
+```
+
+Use column names when the header row is reliable:
+
+```python
+df = pd.read_excel(
+    "report.xlsx",
+    sheet_name="Detail",
+    usecols=["Order", "Budgeted", "Actual"]
+)
+```
+
+Use `nrows` when testing an import before reading a large workbook:
+
+```python
+df_sample = pd.read_excel(
+    "report.xlsx",
+    sheet_name="Detail",
+    usecols="A:F",
+    nrows=100
+)
+```
+
+## 25.7 Preserve IDs, codes, and account numbers
+
+Excel reports often contain identifiers that look like numbers but are not quantities. Examples include member IDs, vendor numbers, account codes, invoice numbers, and ZIP codes.
+
+Force those columns to text during import:
+
+```python
+df = pd.read_excel(
+    "members.xlsx",
+    dtype={
+        "Member ID": "string",
+        "Zip": "string",
+        "Account": "string"
+    }
+)
+```
+
+After import, normalize the text values:
+
+```python
+id_columns = ["Member ID", "Zip", "Account"]
+
+df[id_columns] = df[id_columns].apply(lambda col: col.astype("string").str.strip())
+```
+
+If a code must have a fixed width, use `str.zfill()`:
+
+```python
+df["Zip"] = df["Zip"].str.zfill(5)
+```
+
+## 25.8 Use converters for custom import cleanup
+
+`converters` applies a function to a column as pandas imports it. This is useful when a column needs consistent cleanup before type conversion.
+
+```python
+def clean_money(value):
+    if pd.isna(value):
+        return pd.NA
+
+    text = str(value).strip()
+    text = text.replace("$", "").replace(",", "")
+    text = text.replace("(", "-").replace(")", "")
+
+    return pd.to_numeric(text, errors="coerce")
+
+
+df = pd.read_excel(
+    "report.xlsx",
+    converters={"Actual": clean_money, "Budgeted": clean_money}
+)
+```
+
+This handles values such as `$1,250.00` and accounting-style negatives such as `($75.00)`.
+
+Use `dtype` when you simply want a type. Use `converters` when values need custom parsing or cleanup.
+
+## 25.9 Handle dates from Excel reports
+
+Use `parse_dates` when the date column is consistent:
+
+```python
+df = pd.read_excel(
+    "orders.xlsx",
+    parse_dates=["Order Date"]
+)
+```
+
+If dates import as text, convert after import so you can inspect failures:
+
+```python
+df["Order Date"] = pd.to_datetime(df["Order Date"], errors="coerce")
+
+bad_dates = df[df["Order Date"].isna()]
+```
+
+If text dates have a known format, specify it:
+
+```python
+df["Order Date"] = pd.to_datetime(
+    df["Order Date"],
+    format="%m/%d/%Y",
+    errors="coerce"
+)
+```
+
+Always check failed date conversions before relying on time-based summaries.
+
+## 25.10 Control missing-value handling
+
+pandas recognizes many strings as missing by default. That is usually helpful, but it can surprise you if a code such as `NA` is meaningful.
+
+Treat custom values as missing:
+
+```python
+df = pd.read_excel(
+    "report.xlsx",
+    na_values=["", "--", "not provided", "missing"]
+)
+```
+
+Keep default missing-value detection turned off when codes such as `NA` should remain text:
+
+```python
+df = pd.read_excel(
+    "report.xlsx",
+    dtype={"State Code": "string"},
+    keep_default_na=False
+)
+```
+
+After import, check missing values explicitly:
+
+```python
+missing_summary = df.isna().sum().sort_values(ascending=False)
+print(missing_summary)
+```
+
+## 25.11 Clean Excel column names
+
+Excel headers often contain extra spaces, line breaks, or inconsistent capitalization.
 
 ```python
 df.columns = (
     df.columns
+      .astype("string")
       .str.strip()
       .str.replace("\n", " ", regex=False)
       .str.replace(r"\s+", " ", regex=True)
@@ -2813,34 +3091,193 @@ df.columns = (
 
 This removes extra spaces and line breaks.
 
-## 25.3 Save filtered results to Excel
+For scripts, many people prefer standardized snake_case names:
+
+```python
+df.columns = (
+    df.columns
+      .astype("string")
+      .str.strip()
+      .str.lower()
+      .str.replace("\n", " ", regex=False)
+      .str.replace(r"[^a-z0-9]+", "_", regex=True)
+      .str.strip("_")
+)
+```
+
+Example result: `Order Date` becomes `order_date`.
+
+## 25.12 Remove blank rows, repeated headers, and total rows
+
+Remove fully blank rows:
+
+```python
+df = df.dropna(how="all")
+```
+
+Remove rows where an exported report repeated the header in the middle of the data:
+
+```python
+df = df[df["Order"].ne("Order")]
+```
+
+Remove grand-total rows when they are mixed into detail data:
+
+```python
+df = df[~df["Order"].astype("string").str.contains("total", case=False, na=False)]
+```
+
+Then reset the index after row cleanup:
+
+```python
+df = df.reset_index(drop=True)
+```
+
+## 25.13 Unmerge-style cleanup with forward fill
+
+Merged cells in Excel can create missing values in pandas because the value appears only in the first row of a merged area.
+
+For example, a department may appear once above several orders. Fill it downward after import:
+
+```python
+df["Department"] = df["Department"].ffill()
+```
+
+Only forward fill columns where repeated context is intended. Do not blindly forward fill every column in a financial report.
+
+## 25.14 Read every sheet and combine matching sheets
+
+Use `sheet_name=None` to read all worksheets into a dictionary:
+
+```python
+sheets = pd.read_excel("monthly_report.xlsx", sheet_name=None)
+
+for sheet_name, sheet_df in sheets.items():
+    print(sheet_name, sheet_df.shape)
+```
+
+If every monthly sheet has the same structure, combine them and keep the source sheet name:
+
+```python
+frames = []
+
+for sheet_name, sheet_df in sheets.items():
+    temp = sheet_df.copy()
+    temp["Source Sheet"] = sheet_name
+    frames.append(temp)
+
+combined = pd.concat(frames, ignore_index=True)
+```
+
+If only some sheets should be included, filter by sheet name:
+
+```python
+monthly_sheets = {
+    name: sheet
+    for name, sheet in sheets.items()
+    if name.startswith("2026-")
+}
+```
+
+## 25.15 Validate the imported report before analysis
+
+Validate the file as soon as it is imported. This catches wrong sheets, wrong header rows, and changed report layouts.
+
+```python
+required_columns = ["Order", "Budgeted", "Actual"]
+missing_columns = [col for col in required_columns if col not in df.columns]
+
+if missing_columns:
+    raise ValueError(f"Missing required columns: {missing_columns}")
+```
+
+Check row counts and totals:
+
+```python
+print("Rows:", len(df))
+print("Budgeted total:", df["Budgeted"].sum())
+print("Actual total:", df["Actual"].sum())
+```
+
+If the Excel report has a known control total, compare it to the imported detail:
+
+```python
+control_total = 125000
+actual_total = df["Actual"].sum()
+
+if not np.isclose(actual_total, control_total):
+    raise ValueError(f"Actual total does not match: {actual_total}")
+```
+
+## 25.16 Save filtered results to Excel
 
 ```python
 under_budget = df[df["Actual"] < df["Budgeted"]]
 
+over_budget = df[df["Actual"] > df["Budgeted"]]
+
 under_budget.to_excel("budget_variance_items.xlsx", index=False)
 ```
 
-## 25.4 Save multiple outputs
+Use `index=False` for files meant for Excel users unless the DataFrame index is meaningful.
+
+## 25.17 Save multiple outputs to one workbook
 
 ```python
+summary = (
+    df.groupby("Department", as_index=False)
+      .agg(
+          Budgeted=("Budgeted", "sum"),
+          Actual=("Actual", "sum")
+      )
+)
+
+summary["Variance"] = summary["Actual"] - summary["Budgeted"]
+
 with pd.ExcelWriter("order_review_output.xlsx", engine="openpyxl") as writer:
     df.to_excel(writer, sheet_name="All Data", index=False)
     under_budget.to_excel(writer, sheet_name="Under Budget", index=False)
+    over_budget.to_excel(writer, sheet_name="Over Budget", index=False)
     summary.to_excel(writer, sheet_name="Summary", index=False)
 ```
 
-## 25.5 Avoid common Excel problems
+This creates one workbook with separate tabs for the detail data, exception lists, and summary.
+
+## 25.18 Basic Excel output formatting
+
+pandas can write the workbook, and the Excel writer engine can handle formatting. With `xlsxwriter`, you can add currency formats, freeze panes, and column widths:
+
+```python
+with pd.ExcelWriter("formatted_report.xlsx", engine="xlsxwriter") as writer:
+    summary.to_excel(writer, sheet_name="Summary", index=False)
+
+    workbook = writer.book
+    worksheet = writer.sheets["Summary"]
+
+    money_format = workbook.add_format({"num_format": "$#,##0.00"})
+    worksheet.set_column("A:A", 22)
+    worksheet.set_column("B:D", 14, money_format)
+    worksheet.freeze_panes(1, 0)
+```
+
+Use formatting for human-facing outputs, but keep the underlying data clean and numeric.
+
+## 25.19 Avoid common Excel problems
 
 | Problem | Cause | Fix |
 |---|---|---|
 | IDs become numbers | Excel/pandas inferred numeric type | Use `dtype={"ID": "string"}` |
-| Dates become text | Date column not parsed | Use `pd.to_datetime()` |
-| Blank rows appear | Export contains extra blank rows | Use `dropna(how="all")` |
-| Wrong header row | Report has title rows | Use `skiprows` or `header` |
-| Money values are text | Dollar signs/commas | Clean text, then `pd.to_numeric()` |
+| Leading zeros disappear | Codes were imported as numbers | Import as string, then use `.str.zfill()` if needed |
+| Dates become text | Date column not parsed or mixed formats exist | Use `parse_dates`, then validate with `pd.to_datetime()` |
+| Blank rows appear | Export contains spacer rows | Use `dropna(how="all")` |
+| Wrong header row | Report has title rows | Use `skiprows`, `header`, or `names` |
+| Footnotes become data | Report has bottom notes or approvals | Use `skipfooter` or filter rows after import |
+| Repeated headers appear | Report repeats headers on each printed page | Filter out rows where a key column equals its header text |
+| Money values are text | Dollar signs, commas, or accounting negatives | Use `converters` or clean text, then `pd.to_numeric()` |
+| Merged cells create blanks | Excel stores the merged value once | Use targeted `.ffill()` on context columns |
+| Formulas import as results | Excel stores calculated values separately from formulas | Verify the workbook was calculated and saved before import |
 
-Example cleaning money stored as text:
+Example cleaning money stored as text after import:
 
 ```python
 df["Actual"] = (
@@ -2848,10 +3285,75 @@ df["Actual"] = (
       .astype("string")
       .str.replace("$", "", regex=False)
       .str.replace(",", "", regex=False)
+      .str.replace("(", "-", regex=False)
+      .str.replace(")", "", regex=False)
 )
 
 df["Actual"] = pd.to_numeric(df["Actual"], errors="coerce")
 ```
+
+## 25.20 A complete messy-report import pattern
+
+This pattern combines the most common steps:
+
+```python
+import pandas as pd
+import numpy as np
+
+
+def clean_money(value):
+    if pd.isna(value):
+        return pd.NA
+
+    text = str(value).strip()
+    text = text.replace("$", "").replace(",", "")
+    text = text.replace("(", "-").replace(")", "")
+
+    return pd.to_numeric(text, errors="coerce")
+
+
+df = pd.read_excel(
+    "report.xlsx",
+    sheet_name="Detail",
+    skiprows=4,
+    skipfooter=2,
+    usecols="A:H",
+    dtype={"Order": "string", "Member ID": "string"},
+    converters={"Budgeted": clean_money, "Actual": clean_money},
+    na_values=["--", "not provided"]
+)
+
+df.columns = (
+    df.columns
+      .astype("string")
+      .str.strip()
+      .str.replace("\n", " ", regex=False)
+      .str.replace(r"\s+", " ", regex=True)
+)
+
+df = df.dropna(how="all")
+df = df[df["Order"].notna()]
+df = df[df["Order"].ne("Order")]
+df = df.reset_index(drop=True)
+
+required_columns = ["Order", "Budgeted", "Actual"]
+missing_columns = [col for col in required_columns if col not in df.columns]
+
+if missing_columns:
+    raise ValueError(f"Missing required columns: {missing_columns}")
+
+df["Variance"] = df["Actual"] - df["Budgeted"]
+```
+
+The best Excel workflow is usually:
+
+1. Preview the workbook layout.
+2. Import only the real table.
+3. Preserve identifiers as text.
+4. Convert money, dates, and numeric measures deliberately.
+5. Remove blank, repeated-header, and total rows.
+6. Validate columns, row counts, and totals.
+7. Export clear review tabs for Excel users.
 
 ---
 
@@ -7274,6 +7776,8 @@ pd.read_csv("file.csv", dtype={"Zip": "string"})
 # Excel
 pd.read_excel("file.xlsx")
 pd.read_excel("file.xlsx", sheet_name="Summary")
+pd.read_excel("file.xlsx", usecols="A:F", skiprows=4, skipfooter=2)
+pd.read_excel("file.xlsx", dtype={"Zip": "string"}, parse_dates=["Date"])
 sheets = pd.read_excel("file.xlsx", sheet_name=None)  # dictionary of DataFrames
 
 # Other common formats
