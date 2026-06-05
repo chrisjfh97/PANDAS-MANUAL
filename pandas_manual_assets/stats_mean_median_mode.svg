@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="560" viewBox="0 0 900 560" role="img" aria-labelledby="title desc">
+<title>Mean, Median, and Mode</title>
+<desc>Mean, Median, and Mode chart for the pandas manual.</desc>
+<rect width="100%" height="100%" fill="white"/>
+<style>text{font-family:Arial,Helvetica,sans-serif;fill:#232323}.title{font-size:30px;font-weight:700}.label{font-size:17px}.small{font-size:14px}.legend{font-size:16px}</style>
+<text class="title" x="450.0" y="48" text-anchor="middle">Mean, Median, and Mode</text>
+<line x1="90" y1="470.0" x2="840" y2="470.0" stroke="#e2e8f0"/>
+<line x1="90" y1="394.0" x2="840" y2="394.0" stroke="#e2e8f0"/>
+<line x1="90" y1="318.0" x2="840" y2="318.0" stroke="#e2e8f0"/>
+<line x1="90" y1="242.0" x2="840" y2="242.0" stroke="#e2e8f0"/>
+<line x1="90" y1="166.0" x2="840" y2="166.0" stroke="#e2e8f0"/>
+<line x1="90" y1="90.0" x2="840" y2="90.0" stroke="#e2e8f0"/>
+<line x1="90" y1="90" x2="90" y2="470" stroke="#4b5563" stroke-width="3"/>
+<line x1="90" y1="470" x2="840" y2="470" stroke="#4b5563" stroke-width="3"/>
+<rect x="95.0" y="185.0" width="65.0" height="285.0" fill="#2563eb"/>
+<rect x="170.0" y="90.0" width="65.0" height="380.0" fill="#2563eb"/>
+<rect x="245.0" y="280.0" width="65.0" height="190.0" fill="#2563eb"/>
+<rect x="320.0" y="470.0" width="65.0" height="0.0" fill="#2563eb"/>
+<rect x="395.0" y="470.0" width="65.0" height="0.0" fill="#2563eb"/>
+<rect x="470.0" y="470.0" width="65.0" height="0.0" fill="#2563eb"/>
+<rect x="545.0" y="470.0" width="65.0" height="0.0" fill="#2563eb"/>
+<rect x="620.0" y="470.0" width="65.0" height="0.0" fill="#2563eb"/>
+<rect x="695.0" y="470.0" width="65.0" height="0.0" fill="#2563eb"/>
+<rect x="770.0" y="375.0" width="65.0" height="95.0" fill="#2563eb"/>
+<line x1="232.5" y1="90" x2="232.5" y2="470" stroke="#dc2626" stroke-width="4"/>
+<text class="small" x="240.5" y="110.0" text-anchor="start" fill="#dc2626">Mean</text>
+<line x1="165.0" y1="90" x2="165.0" y2="470" stroke="#16a34a" stroke-width="4"/>
+<text class="small" x="173.0" y="138.0" text-anchor="start" fill="#16a34a">Median</text>
+<line x1="165.0" y1="90" x2="165.0" y2="470" stroke="#7c3aed" stroke-width="4"/>
+<text class="small" x="173.0" y="166.0" text-anchor="start" fill="#7c3aed">Mode</text>
+<text class="small" x="112.0" y="508.0" text-anchor="start">Outlier pulls the mean to the right</text>
+</svg>

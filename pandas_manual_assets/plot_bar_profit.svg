@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="560" viewBox="0 0 900 560" role="img" aria-labelledby="title desc">
+<title>Profit by Month</title>
+<desc>Profit by Month chart for the pandas manual.</desc>
+<rect width="100%" height="100%" fill="white"/>
+<style>text{font-family:Arial,Helvetica,sans-serif;fill:#232323}.title{font-size:30px;font-weight:700}.label{font-size:17px}.small{font-size:14px}.legend{font-size:16px}</style>
+<text class="title" x="450.0" y="48" text-anchor="middle">Profit by Month</text>
+<line x1="90" y1="470.0" x2="840" y2="470.0" stroke="#e2e8f0"/>
+<line x1="90" y1="394.0" x2="840" y2="394.0" stroke="#e2e8f0"/>
+<line x1="90" y1="318.0" x2="840" y2="318.0" stroke="#e2e8f0"/>
+<line x1="90" y1="242.0" x2="840" y2="242.0" stroke="#e2e8f0"/>
+<line x1="90" y1="166.0" x2="840" y2="166.0" stroke="#e2e8f0"/>
+<line x1="90" y1="90.0" x2="840" y2="90.0" stroke="#e2e8f0"/>
+<line x1="90" y1="90" x2="90" y2="470" stroke="#4b5563" stroke-width="3"/>
+<line x1="90" y1="470" x2="840" y2="470" stroke="#4b5563" stroke-width="3"/>
+<rect x="102.0" y="268.8" width="101.0" height="201.2" fill="#16a34a"/>
+<text class="small" x="152.5" y="498.0" text-anchor="middle">Jan</text>
+<rect x="227.0" y="246.5" width="101.0" height="223.5" fill="#16a34a"/>
+<text class="small" x="277.5" y="498.0" text-anchor="middle">Feb</text>
+<rect x="352.0" y="197.3" width="101.0" height="272.7" fill="#16a34a"/>
+<text class="small" x="402.5" y="498.0" text-anchor="middle">Mar</text>
+<rect x="477.0" y="215.2" width="101.0" height="254.8" fill="#16a34a"/>
+<text class="small" x="527.5" y="498.0" text-anchor="middle">Apr</text>
+<rect x="602.0" y="152.6" width="101.0" height="317.4" fill="#16a34a"/>
+<text class="small" x="652.5" y="498.0" text-anchor="middle">May</text>
+<rect x="727.0" y="116.8" width="101.0" height="353.2" fill="#16a34a"/>
+<text class="small" x="777.5" y="498.0" text-anchor="middle">Jun</text>
+</svg>

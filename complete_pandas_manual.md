@@ -2344,11 +2344,11 @@ When reading statistics, ask:
 
 # 28. Charts for Understanding Statistics
 
-Markdown can include charts as image files. The charts below were generated with pandas/Matplotlib and saved in the `pandas_manual_assets` folder.
+Markdown can include charts as image files. The charts below are saved in the `pandas_manual_assets` folder; the code examples show how to generate similar charts with pandas/Matplotlib.
 
 ## 28.1 Mean, median, and mode chart
 
-![Mean, Median, and Mode](pandas_manual_assets/stats_mean_median_mode.png)
+![Mean, Median, and Mode](pandas_manual_assets/stats_mean_median_mode.svg)
 
 How to read this chart:
 
@@ -2380,7 +2380,7 @@ plt.show()
 
 ## 28.2 Histogram distribution chart
 
-![Histogram Distribution](pandas_manual_assets/plot_histogram_distribution.png)
+![Histogram Distribution](pandas_manual_assets/plot_histogram_distribution.svg)
 
 How to read this chart:
 
@@ -2394,7 +2394,7 @@ Use a histogram when you want to understand distribution.
 
 ## 28.3 Box plot chart
 
-![Box Plot](pandas_manual_assets/plot_boxplot_quartiles_outliers.png)
+![Box Plot](pandas_manual_assets/plot_boxplot_quartiles_outliers.svg)
 
 How to read this chart:
 
@@ -2409,7 +2409,7 @@ Use a box plot when comparing spread between groups.
 
 ## 28.4 Correlation heatmap
 
-![Correlation Heatmap](pandas_manual_assets/plot_correlation_heatmap.png)
+![Correlation Heatmap](pandas_manual_assets/plot_correlation_heatmap.svg)
 
 How to read this chart:
 
@@ -2447,7 +2447,7 @@ df["Profit"] = df["Revenue"] - df["Cost"]
 
 ## 29.1 Line plot
 
-![Line Plot](pandas_manual_assets/plot_line_over_time.png)
+![Line Plot](pandas_manual_assets/plot_line_over_time.svg)
 
 Use a line plot for trends over time.
 
@@ -2469,7 +2469,7 @@ How to read it:
 
 ## 29.2 Bar plot
 
-![Bar Plot](pandas_manual_assets/plot_bar_profit.png)
+![Bar Plot](pandas_manual_assets/plot_bar_profit.svg)
 
 Use a bar plot to compare categories.
 
@@ -2522,7 +2522,7 @@ Use box plots to compare median, spread, and outliers.
 
 ## 29.6 Scatter plot
 
-![Scatter Plot](pandas_manual_assets/plot_scatter_relationship.png)
+![Scatter Plot](pandas_manual_assets/plot_scatter_relationship.svg)
 
 Use a scatter plot to inspect the relationship between two numeric variables.
 
@@ -2543,7 +2543,7 @@ How to read it:
 
 ## 29.7 Area plot
 
-![Area Plot](pandas_manual_assets/plot_area_volume.png)
+![Area Plot](pandas_manual_assets/plot_area_volume.svg)
 
 Use an area plot to emphasize volume over time.
 
@@ -2562,7 +2562,7 @@ How to read it:
 
 ## 29.8 Pie chart
 
-![Pie Chart](pandas_manual_assets/plot_pie_share.png)
+![Pie Chart](pandas_manual_assets/plot_pie_share.svg)
 
 Use pie charts only for simple part-to-whole comparisons.
 

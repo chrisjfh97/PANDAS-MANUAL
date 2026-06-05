@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="560" viewBox="0 0 900 560" role="img" aria-labelledby="title desc">
+<title>Histogram Distribution</title>
+<desc>Histogram Distribution chart for the pandas manual.</desc>
+<rect width="100%" height="100%" fill="white"/>
+<style>text{font-family:Arial,Helvetica,sans-serif;fill:#232323}.title{font-size:30px;font-weight:700}.label{font-size:17px}.small{font-size:14px}.legend{font-size:16px}</style>
+<text class="title" x="450.0" y="48" text-anchor="middle">Histogram Distribution</text>
+<line x1="90" y1="470.0" x2="840" y2="470.0" stroke="#e2e8f0"/>
+<line x1="90" y1="394.0" x2="840" y2="394.0" stroke="#e2e8f0"/>
+<line x1="90" y1="318.0" x2="840" y2="318.0" stroke="#e2e8f0"/>
+<line x1="90" y1="242.0" x2="840" y2="242.0" stroke="#e2e8f0"/>
+<line x1="90" y1="166.0" x2="840" y2="166.0" stroke="#e2e8f0"/>
+<line x1="90" y1="90.0" x2="840" y2="90.0" stroke="#e2e8f0"/>
+<line x1="90" y1="90" x2="90" y2="470" stroke="#4b5563" stroke-width="3"/>
+<line x1="90" y1="470" x2="840" y2="470" stroke="#4b5563" stroke-width="3"/>
+<rect x="95.0" y="446.2" width="65.0" height="23.8" fill="#0d9488"/>
+<rect x="170.0" y="398.8" width="65.0" height="71.2" fill="#0d9488"/>
+<rect x="245.0" y="303.8" width="65.0" height="166.2" fill="#0d9488"/>
+<rect x="320.0" y="185.0" width="65.0" height="285.0" fill="#0d9488"/>
+<rect x="395.0" y="90.0" width="65.0" height="380.0" fill="#0d9488"/>
+<rect x="470.0" y="137.5" width="65.0" height="332.5" fill="#0d9488"/>
+<rect x="545.0" y="232.5" width="65.0" height="237.5" fill="#0d9488"/>
+<rect x="620.0" y="327.5" width="65.0" height="142.5" fill="#0d9488"/>
+<rect x="695.0" y="398.8" width="65.0" height="71.2" fill="#0d9488"/>
+<rect x="770.0" y="446.2" width="65.0" height="23.8" fill="#0d9488"/>
+<text class="small" x="450.0" y="508.0" text-anchor="middle">Score ranges</text>
+</svg>
