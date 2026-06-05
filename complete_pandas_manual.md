@@ -39,7 +39,7 @@
 28. [Charts for Understanding Statistics](#28-charts-for-understanding-statistics)
 29. [Plotting with pandas and Matplotlib](#29-plotting-with-pandas-and-matplotlib)
 30. [How to Read Common Plot Types](#30-how-to-read-common-plot-types)
-31. [Practical Claims/Appeals-Style Example](#31-practical-claimsappeals-style-example)
+31. [Practical Orders and Inventory Example](#31-practical-orders-and-inventory-example)
 32. [Method Chaining](#32-method-chaining)
 33. [Performance Tips](#33-performance-tips)
 34. [Additional pandas Operations](#34-additional-pandas-operations)
@@ -68,7 +68,7 @@ Each important pandas topic includes:
 
 You can read it from top to bottom, or you can jump directly to the section you need.
 
-The examples use small datasets so the logic is easy to understand. In real work, the same code patterns apply to large Excel files, CSV reports, claim reports, audit logs, productivity reports, and automation outputs.
+The examples use small datasets so the logic is easy to understand. In real work, the same code patterns apply to large Excel files, CSV reports, order reports, audit logs, productivity reports, and automation outputs.
 
 ---
 
@@ -91,9 +91,9 @@ Example:
 import pandas as pd
 
 df = pd.DataFrame({
-    "Claim": ["A100", "A101", "A102"],
-    "Expected": [100.00, 250.00, 175.00],
-    "Allowed": [80.00, 250.00, 150.00]
+    "Order": ["A100", "A101", "A102"],
+    "Budgeted": [100.00, 250.00, 175.00],
+    "Actual": [80.00, 250.00, 150.00]
 })
 
 print(df)
@@ -102,7 +102,7 @@ print(df)
 Output:
 
 ```text
-  Claim  Expected  Allowed
+  Order  Budgeted  Actual
 0  A100     100.0     80.0
 1  A101     250.0    250.0
 2  A102     175.0    150.0
@@ -267,8 +267,8 @@ A `DataFrame` is a two-dimensional table.
 ```python
 df = pd.DataFrame({
     "Employee": ["Ana", "Luis", "Maria"],
-    "Department": ["Appeals", "Appeals", "Audit"],
-    "Claims": [50, 45, 60]
+    "Department": ["Operations", "Operations", "Finance"],
+    "Orders": [50, 45, 60]
 })
 
 print(df)
@@ -277,35 +277,35 @@ print(df)
 Output:
 
 ```text
-  Employee Department  Claims
-0      Ana    Appeals      50
-1     Luis    Appeals      45
-2    Maria      Audit      60
+  Employee Department  Orders
+0      Ana    Operations      50
+1     Luis    Operations      45
+2    Maria      Finance      60
 ```
 
 A DataFrame contains:
 
-- Column labels: `Employee`, `Department`, `Claims`
+- Column labels: `Employee`, `Department`, `Orders`
 - Row index: `0`, `1`, `2`
 - Values: the actual data cells
 
 ## 5.3 Series vs DataFrame
 
 ```python
-single_column = df["Claims"]        # Series
-multiple_columns = df[["Employee", "Claims"]]  # DataFrame
+single_column = df["Orders"]        # Series
+multiple_columns = df[["Employee", "Orders"]]  # DataFrame
 ```
 
 A single bracket with one column returns a Series:
 
 ```python
-type(df["Claims"])
+type(df["Orders"])
 ```
 
 A double bracket returns a DataFrame:
 
 ```python
-type(df[["Claims"]])
+type(df[["Orders"]])
 ```
 
 This matters because Series and DataFrames have different shapes and sometimes behave differently.
@@ -320,9 +320,9 @@ This is one of the most common ways to create a DataFrame manually.
 
 ```python
 df = pd.DataFrame({
-    "Claim": ["C001", "C002", "C003"],
-    "Expected": [100, 200, 300],
-    "Allowed": [90, 210, 250]
+    "Order": ["C001", "C002", "C003"],
+    "Budgeted": [100, 200, 300],
+    "Actual": [90, 210, 250]
 })
 ```
 
@@ -334,9 +334,9 @@ This is useful when each record comes as a separate dictionary.
 
 ```python
 records = [
-    {"Claim": "C001", "Expected": 100, "Allowed": 90},
-    {"Claim": "C002", "Expected": 200, "Allowed": 210},
-    {"Claim": "C003", "Expected": 300, "Allowed": 250},
+    {"Order": "C001", "Budgeted": 100, "Actual": 90},
+    {"Order": "C002", "Budgeted": 200, "Actual": 210},
+    {"Order": "C003", "Budgeted": 300, "Actual": 250},
 ]
 
 df = pd.DataFrame(records)
@@ -353,7 +353,7 @@ data = [
     ["C003", 300, 250],
 ]
 
-columns = ["Claim", "Expected", "Allowed"]
+columns = ["Order", "Budgeted", "Actual"]
 
 df = pd.DataFrame(data, columns=columns)
 ```
@@ -363,7 +363,7 @@ This is useful when data is already arranged like rows.
 ## 6.4 Creating an empty DataFrame
 
 ```python
-df = pd.DataFrame(columns=["Claim", "Expected", "Allowed"])
+df = pd.DataFrame(columns=["Order", "Budgeted", "Actual"])
 ```
 
 This is sometimes used when collecting rows in a loop. However, repeatedly appending rows to a DataFrame is inefficient. Usually, it is better to collect dictionaries in a list and convert to a DataFrame once.
@@ -373,8 +373,8 @@ Better pattern:
 ```python
 rows = []
 
-for claim in ["C001", "C002", "C003"]:
-    rows.append({"Claim": claim})
+for order in ["C001", "C002", "C003"]:
+    rows.append({"Order": order})
 
 df = pd.DataFrame(rows)
 ```
@@ -386,25 +386,25 @@ df = pd.DataFrame(rows)
 ## 7.1 Read CSV
 
 ```python
-df = pd.read_csv("claims.csv")
+df = pd.read_csv("orders.csv")
 ```
 
 Common options:
 
 ```python
 df = pd.read_csv(
-    "claims.csv",
+    "orders.csv",
     encoding="utf-8",
-    dtype={"Claim": "string"},
-    parse_dates=["DOS"]
+    dtype={"Order": "string"},
+    parse_dates=["Order_Date"]
 )
 ```
 
 Explanation:
 
 - `encoding="utf-8"`: tells pandas how text is encoded.
-- `dtype={"Claim": "string"}`: forces a column to be text.
-- `parse_dates=["DOS"]`: converts a column to datetime.
+- `dtype={"Order": "string"}`: forces a column to be text.
+- `parse_dates=["Order_Date"]`: converts a column to datetime.
 
 ## 7.2 Write CSV
 
@@ -417,19 +417,19 @@ Use `index=False` unless you intentionally want the pandas index saved as a colu
 ## 7.3 Read Excel
 
 ```python
-df = pd.read_excel("claims.xlsx")
+df = pd.read_excel("orders.xlsx")
 ```
 
 Read a specific sheet:
 
 ```python
-df = pd.read_excel("claims.xlsx", sheet_name="Summary")
+df = pd.read_excel("orders.xlsx", sheet_name="Summary")
 ```
 
 Read multiple sheets:
 
 ```python
-sheets = pd.read_excel("claims.xlsx", sheet_name=None)
+sheets = pd.read_excel("orders.xlsx", sheet_name=None)
 
 summary_df = sheets["Summary"]
 detail_df = sheets["Detail"]
@@ -455,8 +455,8 @@ with pd.ExcelWriter("report.xlsx", engine="openpyxl") as writer:
 
 ```python
 df = pd.read_excel(
-    "claims.xlsx",
-    usecols=["Claim", "Expected", "Allowed"]
+    "orders.xlsx",
+    usecols=["Order", "Budgeted", "Actual"]
 )
 ```
 
@@ -465,7 +465,7 @@ This is useful for large reports.
 ## 7.6 Skip rows
 
 ```python
-df = pd.read_excel("claims.xlsx", skiprows=2)
+df = pd.read_excel("orders.xlsx", skiprows=2)
 ```
 
 This skips the first two rows. Useful when an Excel export has titles or notes above the actual headers.
@@ -473,7 +473,7 @@ This skips the first two rows. Useful when an Excel export has titles or notes a
 ## 7.7 Set header row
 
 ```python
-df = pd.read_excel("claims.xlsx", header=1)
+df = pd.read_excel("orders.xlsx", header=1)
 ```
 
 This tells pandas that row 2 in Excel should be used as the header row, because pandas uses zero-based row numbering.
@@ -619,7 +619,7 @@ df["Status"].value_counts(normalize=True)
 ## 9.1 Select one column
 
 ```python
-df["Allowed"]
+df["Actual"]
 ```
 
 This returns a Series.
@@ -627,7 +627,7 @@ This returns a Series.
 ## 9.2 Select multiple columns
 
 ```python
-df[["Claim", "Expected", "Allowed"]]
+df[["Order", "Budgeted", "Actual"]]
 ```
 
 This returns a DataFrame.
@@ -659,21 +659,21 @@ Value at first row, third column.
 `loc` selects by labels.
 
 ```python
-df.loc[0, "Allowed"]
+df.loc[0, "Actual"]
 ```
 
-Row index `0`, column `Allowed`.
+Row index `0`, column `Actual`.
 
 Select multiple columns:
 
 ```python
-df.loc[:, ["Claim", "Allowed"]]
+df.loc[:, ["Order", "Actual"]]
 ```
 
 Select rows and columns:
 
 ```python
-df.loc[0:2, ["Claim", "Expected", "Allowed"]]
+df.loc[0:2, ["Order", "Budgeted", "Actual"]]
 ```
 
 ## 9.5 `loc` vs `iloc`
@@ -681,7 +681,7 @@ df.loc[0:2, ["Claim", "Expected", "Allowed"]]
 Use `loc` when you know names/labels.
 
 ```python
-df.loc[df["Allowed"] < df["Expected"], ["Claim", "Allowed", "Expected"]]
+df.loc[df["Actual"] < df["Budgeted"], ["Order", "Actual", "Budgeted"]]
 ```
 
 Use `iloc` when you know positions.
@@ -700,27 +700,27 @@ Example dataset:
 
 ```python
 df = pd.DataFrame({
-    "Claim": ["C001", "C002", "C003", "C004"],
-    "Expected": [100, 200, 300, 400],
-    "Allowed": [90, 210, 250, 400],
-    "Status": ["Underpaid", "Overpaid", "Underpaid", "Correct"]
+    "Order": ["C001", "C002", "C003", "C004"],
+    "Budgeted": [100, 200, 300, 400],
+    "Actual": [90, 210, 250, 400],
+    "Status": ["Under Budget", "Over Budget", "Under Budget", "On Budget"]
 })
 ```
 
 ## 10.1 Basic filter
 
 ```python
-underpaid = df[df["Allowed"] < df["Expected"]]
+under_budget = df[df["Actual"] < df["Budgeted"]]
 ```
 
-This keeps rows where allowed is less than expected.
+This keeps rows where actual spending is less than budgeted spending.
 
 ## 10.2 Multiple conditions with AND
 
 Use `&` for AND.
 
 ```python
-result = df[(df["Allowed"] < df["Expected"]) & (df["Expected"] >= 300)]
+result = df[(df["Actual"] < df["Budgeted"]) & (df["Budgeted"] >= 300)]
 ```
 
 Each condition must be wrapped in parentheses.
@@ -730,7 +730,7 @@ Each condition must be wrapped in parentheses.
 Use `|` for OR.
 
 ```python
-result = df[(df["Status"] == "Underpaid") | (df["Status"] == "Overpaid")]
+result = df[(df["Status"] == "Under Budget") | (df["Status"] == "Over Budget")]
 ```
 
 ## 10.4 NOT condition
@@ -738,13 +738,13 @@ result = df[(df["Status"] == "Underpaid") | (df["Status"] == "Overpaid")]
 Use `~` for NOT.
 
 ```python
-not_correct = df[~(df["Status"] == "Correct")]
+not_correct = df[~(df["Status"] == "On Budget")]
 ```
 
 ## 10.5 Filter with `isin`
 
 ```python
-selected = df[df["Status"].isin(["Underpaid", "Overpaid"])]
+selected = df[df["Status"].isin(["Under Budget", "Over Budget"])]
 ```
 
 This is cleaner than many OR conditions.
@@ -752,7 +752,7 @@ This is cleaner than many OR conditions.
 ## 10.6 Filter text contains
 
 ```python
-appeals = df[df["Status"].str.contains("paid", case=False, na=False)]
+matching_status = df[df["Status"].str.contains("budget", case=False, na=False)]
 ```
 
 Explanation:
@@ -775,7 +775,7 @@ known_status = df[df["Status"].notna()]
 ## 10.8 Query syntax
 
 ```python
-result = df.query("Allowed < Expected")
+result = df.query("Actual < Budgeted")
 ```
 
 Query syntax can be easier to read for simple numeric comparisons.
@@ -783,7 +783,7 @@ Query syntax can be easier to read for simple numeric comparisons.
 For column names with spaces:
 
 ```python
-result = df.query("`Allowed Amount` < `Expected Amount`")
+result = df.query("`Actual Amount` < `Budgeted Amount`")
 ```
 
 ---
@@ -793,10 +793,10 @@ result = df.query("`Allowed Amount` < `Expected Amount`")
 ## 11.1 Create a new column
 
 ```python
-df["Variance"] = df["Expected"] - df["Allowed"]
+df["Variance"] = df["Budgeted"] - df["Actual"]
 ```
 
-Positive variance means expected is greater than allowed.
+Positive variance means budgeted is greater than actual.
 
 ## 11.2 Create a column with conditional logic
 
@@ -804,9 +804,9 @@ Positive variance means expected is greater than allowed.
 import numpy as np
 
 df["Category"] = np.where(
-    df["Allowed"] < df["Expected"],
-    "Underpaid",
-    "Not Underpaid"
+    df["Actual"] < df["Budgeted"],
+    "Under Budget",
+    "Not Under Budget"
 )
 ```
 
@@ -814,14 +814,14 @@ df["Category"] = np.where(
 
 ```python
 conditions = [
-    df["Allowed"] < df["Expected"],
-    df["Allowed"] > df["Expected"],
-    df["Allowed"] == df["Expected"],
+    df["Actual"] < df["Budgeted"],
+    df["Actual"] > df["Budgeted"],
+    df["Actual"] == df["Budgeted"],
 ]
 
-choices = ["Underpaid", "Overpaid", "Correct"]
+choices = ["Under Budget", "Over Budget", "On Budget"]
 
-df["Payment_Status"] = np.select(conditions, choices, default="Review")
+df["Budget_Status"] = np.select(conditions, choices, default="Review")
 ```
 
 ## 11.4 Update existing column
@@ -852,15 +852,15 @@ df = df.drop(columns=["Column1", "Column2"])
 
 ```python
 df = df.rename(columns={
-    "Allowed Amt": "Allowed",
-    "Expected Amt": "Expected"
+    "Actual Amt": "Actual",
+    "Budgeted Amt": "Budgeted"
 })
 ```
 
 ## 11.8 Reorder columns
 
 ```python
-df = df[["Claim", "Expected", "Allowed", "Variance", "Payment_Status"]]
+df = df[["Order", "Budgeted", "Actual", "Variance", "Budget_Status"]]
 ```
 
 ---
@@ -878,10 +878,10 @@ By default, pandas creates a numeric index:
 ## 12.1 Set a column as index
 
 ```python
-df = df.set_index("Claim")
+df = df.set_index("Order")
 ```
 
-Now Claim becomes the row label.
+Now Order becomes the row label.
 
 ## 12.2 Reset index
 
@@ -1006,13 +1006,13 @@ df["Status"] = df["Status"].fillna("Unknown")
 Fill numeric values with zero:
 
 ```python
-df["Allowed"] = df["Allowed"].fillna(0)
+df["Actual"] = df["Actual"].fillna(0)
 ```
 
 ## 14.4 Fill with mean or median
 
 ```python
-df["Allowed"] = df["Allowed"].fillna(df["Allowed"].median())
+df["Actual"] = df["Actual"].fillna(df["Actual"].median())
 ```
 
 Use this carefully. Filling financial values with mean or median can distort totals.
@@ -1026,7 +1026,7 @@ df_clean = df.dropna()
 Drop only if specific columns are missing:
 
 ```python
-df_clean = df.dropna(subset=["Claim", "Expected", "Allowed"])
+df_clean = df.dropna(subset=["Order", "Budgeted", "Actual"])
 ```
 
 ## 14.6 Drop columns with too many missing values
@@ -1066,7 +1066,7 @@ df.dtypes
 ## 15.2 Convert to numeric
 
 ```python
-df["Allowed"] = pd.to_numeric(df["Allowed"], errors="coerce")
+df["Actual"] = pd.to_numeric(df["Actual"], errors="coerce")
 ```
 
 `errors="coerce"` converts invalid values to missing values.
@@ -1090,7 +1090,7 @@ dtype: float64
 ## 15.3 Convert to string
 
 ```python
-df["Claim"] = df["Claim"].astype("string")
+df["Order"] = df["Order"].astype("string")
 ```
 
 This is useful for IDs that may contain leading zeros.
@@ -1098,7 +1098,7 @@ This is useful for IDs that may contain leading zeros.
 ## 15.4 Convert to date
 
 ```python
-df["DOS"] = pd.to_datetime(df["DOS"], errors="coerce")
+df["Order_Date"] = pd.to_datetime(df["Order_Date"], errors="coerce")
 ```
 
 ## 15.5 Convert to category
@@ -1119,34 +1119,34 @@ Example:
 
 ```python
 df = pd.DataFrame({
-    "Payer": ["  Aetna ", "BLUE CROSS", "united healthcare"]
+    "Vendor": ["  Acme Supplies ", "BLUE RIVER", "northwind traders"]
 })
 ```
 
 ## 16.1 Strip spaces
 
 ```python
-df["Payer"] = df["Payer"].str.strip()
+df["Vendor"] = df["Vendor"].str.strip()
 ```
 
 ## 16.2 Uppercase/lowercase/title case
 
 ```python
-df["Payer_Upper"] = df["Payer"].str.upper()
-df["Payer_Lower"] = df["Payer"].str.lower()
-df["Payer_Title"] = df["Payer"].str.title()
+df["Vendor_Upper"] = df["Vendor"].str.upper()
+df["Vendor_Lower"] = df["Vendor"].str.lower()
+df["Vendor_Title"] = df["Vendor"].str.title()
 ```
 
 ## 16.3 Contains
 
 ```python
-df["Is_Blue"] = df["Payer"].str.contains("blue", case=False, na=False)
+df["Is_Blue_River"] = df["Vendor"].str.contains("blue", case=False, na=False)
 ```
 
 ## 16.4 Replace text
 
 ```python
-df["Payer"] = df["Payer"].str.replace("BLUE", "Blue", regex=False)
+df["Vendor"] = df["Vendor"].str.replace("BLUE", "Blue", regex=False)
 ```
 
 ## 16.5 Split text
@@ -1181,13 +1181,13 @@ df.columns = (
 Before:
 
 ```text
-Patient DOB
+Customer DOB
 ```
 
 After:
 
 ```text
-patient_dob
+customer_since
 ```
 
 ---
@@ -1199,30 +1199,30 @@ Dates are very important in reports.
 ## 17.1 Convert to datetime
 
 ```python
-df["DOS"] = pd.to_datetime(df["DOS"], errors="coerce")
+df["Order_Date"] = pd.to_datetime(df["Order_Date"], errors="coerce")
 ```
 
 ## 17.2 Extract date parts
 
 ```python
-df["Year"] = df["DOS"].dt.year
-df["Month"] = df["DOS"].dt.month
-df["Month_Name"] = df["DOS"].dt.month_name()
-df["Day"] = df["DOS"].dt.day
-df["Weekday"] = df["DOS"].dt.day_name()
+df["Year"] = df["Order_Date"].dt.year
+df["Month"] = df["Order_Date"].dt.month
+df["Month_Name"] = df["Order_Date"].dt.month_name()
+df["Day"] = df["Order_Date"].dt.day
+df["Weekday"] = df["Order_Date"].dt.day_name()
 ```
 
 ## 17.3 Format dates as text
 
 ```python
-df["DOS_Text"] = df["DOS"].dt.strftime("%m/%d/%Y")
+df["Order_Date_Text"] = df["Order_Date"].dt.strftime("%m/%d/%Y")
 ```
 
 For folder names:
 
 ```python
-df["Month_Folder"] = df["DOS"].dt.strftime("%m.%Y")
-df["Day_Folder"] = df["DOS"].dt.strftime("%m%d%y")
+df["Month_Folder"] = df["Order_Date"].dt.strftime("%m.%Y")
+df["Day_Folder"] = df["Order_Date"].dt.strftime("%m%d%y")
 ```
 
 ## 17.4 Date difference
@@ -1234,20 +1234,20 @@ df["Days_Open"] = (df["Closed_Date"] - df["Open_Date"]).dt.days
 ## 17.5 Filter by date
 
 ```python
-recent = df[df["DOS"] >= "2026-01-01"]
+recent = df[df["Order_Date"] >= "2026-01-01"]
 ```
 
 Between dates:
 
 ```python
-mask = df["DOS"].between("2026-01-01", "2026-03-31")
+mask = df["Order_Date"].between("2026-01-01", "2026-03-31")
 quarter_1 = df[mask]
 ```
 
 ## 17.6 Group by month
 
 ```python
-monthly = df.groupby(df["DOS"].dt.to_period("M"))["Allowed"].sum()
+monthly = df.groupby(df["Order_Date"].dt.to_period("M"))["Actual"].sum()
 ```
 
 Convert period back to timestamp for plotting:
@@ -1263,7 +1263,7 @@ monthly.index = monthly.index.to_timestamp()
 ## 18.1 Simple condition
 
 ```python
-df["Underpaid"] = df["Allowed"] < df["Expected"]
+df["Under Budget"] = df["Actual"] < df["Budgeted"]
 ```
 
 This creates a Boolean column.
@@ -1272,9 +1272,9 @@ This creates a Boolean column.
 
 ```python
 df["Status"] = np.where(
-    df["Allowed"] < df["Expected"],
-    "Underpaid",
-    "Not Underpaid"
+    df["Actual"] < df["Budgeted"],
+    "Under Budget",
+    "Not Under Budget"
 )
 ```
 
@@ -1282,12 +1282,12 @@ df["Status"] = np.where(
 
 ```python
 conditions = [
-    df["Allowed"] < df["Expected"],
-    df["Allowed"] > df["Expected"],
-    df["Allowed"] == df["Expected"]
+    df["Actual"] < df["Budgeted"],
+    df["Actual"] > df["Budgeted"],
+    df["Actual"] == df["Budgeted"]
 ]
 
-choices = ["Underpaid", "Overpaid", "Correct"]
+choices = ["Under Budget", "Over Budget", "On Budget"]
 
 df["Status"] = np.select(conditions, choices, default="Review")
 ```
@@ -1307,7 +1307,7 @@ Avoid deeply nested `np.where` when possible. Use readable conditions.
 Less readable:
 
 ```python
-df["Category"] = np.where(df["Variance"] > 0, "Underpaid", np.where(df["Variance"] < 0, "Overpaid", "Correct"))
+df["Category"] = np.where(df["Variance"] > 0, "Under Budget", np.where(df["Variance"] < 0, "Over Budget", "On Budget"))
 ```
 
 More readable:
@@ -1318,7 +1318,7 @@ conditions = [
     df["Variance"] < 0,
     df["Variance"] == 0
 ]
-choices = ["Underpaid", "Overpaid", "Correct"]
+choices = ["Under Budget", "Over Budget", "On Budget"]
 
 df["Category"] = np.select(conditions, choices, default="Review")
 ```
@@ -1332,7 +1332,7 @@ df["Category"] = np.select(conditions, choices, default="Review")
 Vectorized operations work on entire columns at once.
 
 ```python
-df["Variance"] = df["Expected"] - df["Allowed"]
+df["Variance"] = df["Budgeted"] - df["Actual"]
 ```
 
 This is fast and preferred.
@@ -1343,9 +1343,9 @@ Use `map` to convert values using a dictionary.
 
 ```python
 status_map = {
-    "U": "Underpaid",
-    "O": "Overpaid",
-    "C": "Correct"
+    "U": "Under Budget",
+    "O": "Over Budget",
+    "C": "On Budget"
 }
 
 df["Status_Name"] = df["Status_Code"].map(status_map)
@@ -1357,8 +1357,8 @@ Values not found in the dictionary become missing.
 
 ```python
 df["Status"] = df["Status"].replace({
-    "Under Pay": "Underpaid",
-    "Underpayment": "Underpaid"
+    "Under Budgeted": "Under Budget",
+    "Savings Opportunity": "Under Budget"
 })
 ```
 
@@ -1367,10 +1367,10 @@ df["Status"] = df["Status"].replace({
 ```python
 def classify_variance(value):
     if value > 0:
-        return "Underpaid"
+        return "Under Budget"
     elif value < 0:
-        return "Overpaid"
-    return "Correct"
+        return "Over Budget"
+    return "On Budget"
 
 
 df["Category"] = df["Variance"].apply(classify_variance)
@@ -1380,7 +1380,7 @@ df["Category"] = df["Variance"].apply(classify_variance)
 
 ```python
 def create_note(row):
-    return f"Claim {row['Claim']} has variance {row['Variance']}"
+    return f"Order {row['Order']} has variance {row['Variance']}"
 
 
 df["Note"] = df.apply(create_note, axis=1)
@@ -1409,43 +1409,43 @@ Example:
 
 ```python
 df = pd.DataFrame({
-    "Analyst": ["Ana", "Ana", "Luis", "Luis", "Maria"],
-    "Client": ["A", "B", "A", "B", "A"],
-    "Claims": [10, 20, 15, 25, 30],
-    "Recovered": [1000, 2500, 1500, 3000, 4000]
+    "Reviewer": ["Ana", "Ana", "Luis", "Luis", "Maria"],
+    "Customer": ["A", "B", "A", "B", "A"],
+    "Orders": [10, 20, 15, 25, 30],
+    "Sales": [1000, 2500, 1500, 3000, 4000]
 })
 ```
 
 ## 20.1 Group by one column
 
 ```python
-by_analyst = df.groupby("Analyst")["Claims"].sum()
+by_reviewer = df.groupby("Reviewer")["Orders"].sum()
 ```
 
 Output concept:
 
 ```text
-Analyst
+Reviewer
 Ana      30
 Luis     40
 Maria    30
-Name: Claims, dtype: int64
+Name: Orders, dtype: int64
 ```
 
 ## 20.2 Group by multiple columns
 
 ```python
-by_analyst_client = df.groupby(["Analyst", "Client"])["Recovered"].sum()
+by_reviewer_customer = df.groupby(["Reviewer", "Customer"])["Sales"].sum()
 ```
 
 ## 20.3 Multiple aggregations
 
 ```python
-summary = df.groupby("Analyst").agg(
-    Total_Claims=("Claims", "sum"),
-    Average_Claims=("Claims", "mean"),
-    Total_Recovered=("Recovered", "sum"),
-    Average_Recovered=("Recovered", "mean")
+summary = df.groupby("Reviewer").agg(
+    Total_Orders=("Orders", "sum"),
+    Average_Orders=("Orders", "mean"),
+    Total_Sales=("Sales", "sum"),
+    Average_Sales=("Sales", "mean")
 ).reset_index()
 ```
 
@@ -1454,13 +1454,13 @@ This is one of the most useful pandas patterns.
 ## 20.4 Group and count rows
 
 ```python
-counts = df.groupby("Analyst").size().reset_index(name="Row_Count")
+counts = df.groupby("Reviewer").size().reset_index(name="Row_Count")
 ```
 
 ## 20.5 Group and count non-missing values
 
 ```python
-counts = df.groupby("Analyst")["Recovered"].count()
+counts = df.groupby("Reviewer")["Sales"].count()
 ```
 
 `size()` counts rows.  
@@ -1470,8 +1470,8 @@ counts = df.groupby("Analyst")["Recovered"].count()
 
 ```python
 monthly = df.groupby(df["Date"].dt.to_period("M")).agg(
-    Total_Recovered=("Recovered", "sum"),
-    Claim_Count=("Claim", "nunique")
+    Total_Sales=("Sales", "sum"),
+    Order_Count=("Order", "nunique")
 )
 ```
 
@@ -1479,11 +1479,11 @@ monthly = df.groupby(df["Date"].dt.to_period("M")).agg(
 
 `transform` returns a value for every original row.
 
-Example: calculate each row's percentage of analyst total.
+Example: calculate each row's percentage of reviewer total.
 
 ```python
-df["Analyst_Total"] = df.groupby("Analyst")["Recovered"].transform("sum")
-df["Percent_of_Analyst_Total"] = df["Recovered"] / df["Analyst_Total"]
+df["Reviewer_Total"] = df.groupby("Reviewer")["Sales"].transform("sum")
+df["Percent_of_Reviewer_Total"] = df["Sales"] / df["Reviewer_Total"]
 ```
 
 This keeps the original row count.
@@ -1499,9 +1499,9 @@ Pivot tables summarize data in a spreadsheet-like way.
 ```python
 pivot = pd.pivot_table(
     df,
-    values="Recovered",
-    index="Analyst",
-    columns="Client",
+    values="Sales",
+    index="Reviewer",
+    columns="Customer",
     aggfunc="sum",
     fill_value=0
 )
@@ -1509,9 +1509,9 @@ pivot = pd.pivot_table(
 
 Interpretation:
 
-- Rows are analysts.
-- Columns are clients.
-- Values are recovered amounts.
+- Rows are reviewers.
+- Columns are customers.
+- Values are sales amounts.
 - The aggregation is sum.
 
 ## 21.2 Multiple values
@@ -1519,9 +1519,9 @@ Interpretation:
 ```python
 pivot = pd.pivot_table(
     df,
-    values=["Claims", "Recovered"],
-    index="Analyst",
-    columns="Client",
+    values=["Orders", "Sales"],
+    index="Reviewer",
+    columns="Customer",
     aggfunc="sum",
     fill_value=0
 )
@@ -1532,9 +1532,9 @@ pivot = pd.pivot_table(
 ```python
 pivot = pd.pivot_table(
     df,
-    values="Recovered",
-    index="Analyst",
-    columns="Client",
+    values="Sales",
+    index="Reviewer",
+    columns="Customer",
     aggfunc="sum",
     fill_value=0,
     margins=True,
@@ -1547,16 +1547,16 @@ pivot = pd.pivot_table(
 `crosstab` counts combinations of categories.
 
 ```python
-ct = pd.crosstab(df["Analyst"], df["Client"])
+ct = pd.crosstab(df["Reviewer"], df["Customer"])
 ```
 
 Normalize to percentages:
 
 ```python
-ct_pct = pd.crosstab(df["Analyst"], df["Client"], normalize="index")
+ct_pct = pd.crosstab(df["Reviewer"], df["Customer"], normalize="index")
 ```
 
-This shows each analyst's distribution across clients.
+This shows each reviewer's distribution across customers.
 
 ---
 
@@ -1568,14 +1568,14 @@ Reshaping changes the structure of your DataFrame.
 
 Wide format:
 
-| Analyst | Jan | Feb | Mar |
+| Reviewer | Jan | Feb | Mar |
 |---|---:|---:|---:|
 | Ana | 10 | 12 | 15 |
 | Luis | 8 | 9 | 11 |
 
 Long format:
 
-| Analyst | Month | Claims |
+| Reviewer | Month | Orders |
 |---|---|---:|
 | Ana | Jan | 10 |
 | Ana | Feb | 12 |
@@ -1590,16 +1590,16 @@ Long format is usually better for analysis and plotting.
 
 ```python
 wide = pd.DataFrame({
-    "Analyst": ["Ana", "Luis"],
+    "Reviewer": ["Ana", "Luis"],
     "Jan": [10, 8],
     "Feb": [12, 9],
     "Mar": [15, 11]
 })
 
 long = wide.melt(
-    id_vars="Analyst",
+    id_vars="Reviewer",
     var_name="Month",
-    value_name="Claims"
+    value_name="Orders"
 )
 ```
 
@@ -1607,16 +1607,16 @@ long = wide.melt(
 
 ```python
 wide_again = long.pivot(
-    index="Analyst",
+    index="Reviewer",
     columns="Month",
-    values="Claims"
+    values="Orders"
 ).reset_index()
 ```
 
 ## 22.4 Stack and unstack
 
 ```python
-summary = df.groupby(["Analyst", "Client"])["Recovered"].sum()
+summary = df.groupby(["Reviewer", "Customer"])["Sales"].sum()
 ```
 
 This creates a Series with a multi-index.
@@ -1648,10 +1648,10 @@ There are three common ways to combine DataFrames:
 Use `concat` when stacking similar tables.
 
 ```python
-january = pd.DataFrame({"Claim": ["C001", "C002"], "Month": ["Jan", "Jan"]})
-february = pd.DataFrame({"Claim": ["C003", "C004"], "Month": ["Feb", "Feb"]})
+january = pd.DataFrame({"Order": ["C001", "C002"], "Month": ["Jan", "Jan"]})
+february = pd.DataFrame({"Order": ["C003", "C004"], "Month": ["Feb", "Feb"]})
 
-all_claims = pd.concat([january, february], ignore_index=True)
+all_orders = pd.concat([january, february], ignore_index=True)
 ```
 
 Use `ignore_index=True` to create a new clean index.
@@ -1667,17 +1667,17 @@ This combines side by side by index alignment.
 ## 23.3 Merge like SQL joins
 
 ```python
-claims = pd.DataFrame({
-    "Claim": ["C001", "C002", "C003"],
-    "Payer_ID": [1, 2, 1]
+orders = pd.DataFrame({
+    "Order": ["C001", "C002", "C003"],
+    "Vendor_ID": [1, 2, 1]
 })
 
-payers = pd.DataFrame({
-    "Payer_ID": [1, 2],
-    "Payer_Name": ["Aetna", "Blue Cross"]
+vendors = pd.DataFrame({
+    "Vendor_ID": [1, 2],
+    "Vendor_Name": ["Acme Supplies", "Blue River"]
 })
 
-merged = claims.merge(payers, on="Payer_ID", how="left")
+merged = orders.merge(vendors, on="Vendor_ID", how="left")
 ```
 
 ## 23.4 Join types
@@ -1692,9 +1692,9 @@ merged = claims.merge(payers, on="Payer_ID", how="left")
 ## 23.5 Merge on different column names
 
 ```python
-merged = claims.merge(
-    payers,
-    left_on="Payer_ID",
+merged = orders.merge(
+    vendors,
+    left_on="Vendor_ID",
     right_on="ID",
     how="left"
 )
@@ -1703,9 +1703,9 @@ merged = claims.merge(
 ## 23.6 Validate merge quality
 
 ```python
-merged = claims.merge(
-    payers,
-    on="Payer_ID",
+merged = orders.merge(
+    vendors,
+    on="Vendor_ID",
     how="left",
     validate="many_to_one"
 )
@@ -1725,7 +1725,7 @@ Common validations:
 ## 23.7 Indicator column
 
 ```python
-merged = claims.merge(payers, on="Payer_ID", how="left", indicator=True)
+merged = orders.merge(vendors, on="Vendor_ID", how="left", indicator=True)
 ```
 
 This adds `_merge`:
@@ -1749,7 +1749,7 @@ duplicates = df[df.duplicated()]
 ## 24.2 Find duplicate based on specific columns
 
 ```python
-duplicates = df[df.duplicated(subset=["Claim"], keep=False)]
+duplicates = df[df.duplicated(subset=["Order"], keep=False)]
 ```
 
 `keep=False` shows all duplicated records.
@@ -1757,13 +1757,13 @@ duplicates = df[df.duplicated(subset=["Claim"], keep=False)]
 ## 24.3 Drop duplicates
 
 ```python
-df_unique = df.drop_duplicates(subset=["Claim"])
+df_unique = df.drop_duplicates(subset=["Order"])
 ```
 
 Keep last:
 
 ```python
-df_unique = df.drop_duplicates(subset=["Claim"], keep="last")
+df_unique = df.drop_duplicates(subset=["Order"], keep="last")
 ```
 
 ## 24.4 Basic quality checks
@@ -1771,19 +1771,19 @@ df_unique = df.drop_duplicates(subset=["Claim"], keep="last")
 ```python
 checks = {
     "row_count": len(df),
-    "duplicate_claims": df.duplicated(subset=["Claim"]).sum(),
-    "missing_claims": df["Claim"].isna().sum(),
-    "missing_expected": df["Expected"].isna().sum(),
-    "missing_allowed": df["Allowed"].isna().sum(),
+    "duplicate_orders": df.duplicated(subset=["Order"]).sum(),
+    "missing_orders": df["Order"].isna().sum(),
+    "missing_budgeted": df["Budgeted"].isna().sum(),
+    "missing_actual": df["Actual"].isna().sum(),
 }
 
 print(checks)
 ```
 
-## 24.5 Validate expected columns
+## 24.5 Validate required columns
 
 ```python
-required_columns = ["Claim", "Expected", "Allowed"]
+required_columns = ["Order", "Budgeted", "Actual"]
 
 missing_columns = [col for col in required_columns if col not in df.columns]
 
@@ -1805,7 +1805,7 @@ Excel reports often need special handling.
 df = pd.read_excel(
     "report.xlsx",
     sheet_name="Summary",
-    dtype={"Claim": "string", "Member ID": "string"}
+    dtype={"Order": "string", "Member ID": "string"}
 )
 ```
 
@@ -1827,17 +1827,17 @@ This removes extra spaces and line breaks.
 ## 25.3 Save filtered results to Excel
 
 ```python
-underpaid = df[df["Allowed"] < df["Expected"]]
+under_budget = df[df["Actual"] < df["Budgeted"]]
 
-underpaid.to_excel("underpaid_claims.xlsx", index=False)
+under_budget.to_excel("budget_variance_items.xlsx", index=False)
 ```
 
 ## 25.4 Save multiple outputs
 
 ```python
-with pd.ExcelWriter("claim_review_output.xlsx", engine="openpyxl") as writer:
+with pd.ExcelWriter("order_review_output.xlsx", engine="openpyxl") as writer:
     df.to_excel(writer, sheet_name="All Data", index=False)
-    underpaid.to_excel(writer, sheet_name="Underpaid", index=False)
+    under_budget.to_excel(writer, sheet_name="Under Budget", index=False)
     summary.to_excel(writer, sheet_name="Summary", index=False)
 ```
 
@@ -1854,14 +1854,14 @@ with pd.ExcelWriter("claim_review_output.xlsx", engine="openpyxl") as writer:
 Example cleaning money stored as text:
 
 ```python
-df["Allowed"] = (
-    df["Allowed"]
+df["Actual"] = (
+    df["Actual"]
       .astype("string")
       .str.replace("$", "", regex=False)
       .str.replace(",", "", regex=False)
 )
 
-df["Allowed"] = pd.to_numeric(df["Allowed"], errors="coerce")
+df["Actual"] = pd.to_numeric(df["Actual"], errors="coerce")
 ```
 
 ---
@@ -1909,9 +1909,9 @@ The sum is the total of all values.
 
 Use cases:
 
-- Total charges.
-- Total expected allowed amount.
-- Total recovered amount.
+- Total order amounts.
+- Total budgeted and actual amount.
+- Total sales amount.
 - Total variance.
 
 ## 26.3 Mean
@@ -1954,7 +1954,7 @@ Be careful with mean when:
 
 - There are extreme values.
 - The data is skewed.
-- A few large claims can distort the average.
+- A few large orders can distort the average.
 
 ## 26.4 Median
 
@@ -2004,7 +2004,7 @@ Returns both `A` and `B` because both appear twice.
 
 Use mode when:
 
-- You need the most common payer.
+- You need the most common product category.
 - You need the most common issue type.
 - You need the most common status.
 - You are analyzing categorical data.
@@ -2066,9 +2066,9 @@ Interpretation:
 
 Example interpretation:
 
-If average recovered amount is `$1,000` and standard deviation is `$100`, most values are relatively close to `$1,000`.
+If average sales amount is `$1,000` and standard deviation is `$100`, most values are relatively close to `$1,000`.
 
-If average recovered amount is `$1,000` and standard deviation is `$900`, values are highly spread out.
+If average sales amount is `$1,000` and standard deviation is `$900`, values are highly spread out.
 
 ## 26.10 Percentiles and quantiles
 
@@ -2138,7 +2138,7 @@ Interpretation:
 Correlation measures how two numeric columns move together.
 
 ```python
-df[["Expected", "Allowed"]].corr()
+df[["Budgeted", "Actual"]].corr()
 ```
 
 Correlation ranges from `-1` to `1`.
@@ -2156,7 +2156,7 @@ Important: correlation does not prove causation.
 Covariance also measures how two variables move together.
 
 ```python
-df[["Expected", "Allowed"]].cov()
+df[["Budgeted", "Actual"]].cov()
 ```
 
 Interpretation:
@@ -2202,7 +2202,7 @@ summary = scores.agg(["count", "sum", "mean", "median", "min", "max", "std"])
 For a DataFrame:
 
 ```python
-summary = df[["Expected", "Allowed", "Variance"]].agg([
+summary = df[["Budgeted", "Actual", "Variance"]].agg([
     "count", "sum", "mean", "median", "min", "max", "std"
 ])
 ```
@@ -2210,10 +2210,10 @@ summary = df[["Expected", "Allowed", "Variance"]].agg([
 ## 26.19 Grouped statistics
 
 ```python
-summary = df.groupby("Analyst").agg(
-    Claim_Count=("Claim", "nunique"),
-    Total_Expected=("Expected", "sum"),
-    Total_Allowed=("Allowed", "sum"),
+summary = df.groupby("Reviewer").agg(
+    Order_Count=("Order", "nunique"),
+    Total_Budgeted=("Budgeted", "sum"),
+    Total_Actual=("Actual", "sum"),
     Average_Variance=("Variance", "mean"),
     Median_Variance=("Variance", "median")
 ).reset_index()
@@ -2224,7 +2224,7 @@ Interpretation:
 - Total columns show volume.
 - Average columns show central tendency.
 - Median columns show typical values when outliers may exist.
-- Claim count shows workload or sample size.
+- Order count shows workload or sample size.
 
 ---
 
@@ -2250,7 +2250,7 @@ print(amounts.median())
 
 The mean is much higher because of `10000`. The median better represents the typical record.
 
-In claim data, this matters because a few very large claims can distort averages.
+In order data, this matters because a few very large orders can distort averages.
 
 ## 27.2 Mode interpretation
 
@@ -2260,7 +2260,7 @@ Mode tells you what appears most often.
 df["Issue_Type"].mode()
 ```
 
-If the mode is `Units Issue`, that means it is the most frequently occurring issue type.
+If the mode is `Quantity Issue`, that means it is the most frequently occurring issue type.
 
 Mode is especially useful for categorical data.
 
@@ -2289,7 +2289,7 @@ Percentiles help understand thresholds.
 Example:
 
 ```python
-df["Recovered"].quantile([0.25, 0.50, 0.75, 0.90])
+df["Sales"].quantile([0.25, 0.50, 0.75, 0.90])
 ```
 
 If the 90th percentile is `$5,000`, that means 90% of records are at or below `$5,000`, and 10% are above `$5,000`.
@@ -2300,16 +2300,16 @@ An outlier is unusual, not automatically wrong.
 
 Examples of valid outliers:
 
-- A very high-dollar claim.
+- A very high-dollar order.
 - A rare contract issue.
-- A claim with many line items.
-- A large recovery after appeal.
+- An order with many line items.
+- A large one-time purchase.
 
 Examples of suspicious outliers:
 
-- Negative charges when impossible.
+- Negative order amounts when impossible.
 - Dates far outside the reporting period.
-- Allowed amount much higher than charge.
+- Actual amount much higher than budgeted.
 - Unit count extremely high because of data entry error.
 
 ## 27.6 Correlation interpretation
@@ -2317,12 +2317,12 @@ Examples of suspicious outliers:
 Example:
 
 ```python
-df[["Claim_Count", "Recovered_Amount"]].corr()
+df[["Order_Count", "Sales_Amount"]].corr()
 ```
 
-If correlation is `0.90`, claim count and recovered amount tend to increase together.
+If correlation is `0.90`, order count and sales amount tend to increase together.
 
-If correlation is `0.05`, claim count does not explain recovered amount very well.
+If correlation is `0.05`, order count does not explain sales amount very well.
 
 If correlation is `-0.80`, as one goes up, the other tends to go down.
 
@@ -2438,7 +2438,7 @@ df = pd.DataFrame({
     "Month": ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
     "Revenue": [12500, 13200, 15100, 14800, 17400, 18900],
     "Cost": [8000, 8200, 9000, 9100, 10300, 11100],
-    "Claims": [80, 85, 92, 89, 101, 108]
+    "Orders": [80, 85, 92, 89, 101, 108]
 })
 
 df["Profit"] = df["Revenue"] - df["Cost"]
@@ -2501,9 +2501,9 @@ Use horizontal bars when category labels are long.
 ## 29.4 Histogram
 
 ```python
-ax = df["Claims"].plot(kind="hist", bins=5, edgecolor="black")
-ax.set_title("Distribution of Claim Counts")
-ax.set_xlabel("Claims")
+ax = df["Orders"].plot(kind="hist", bins=5, edgecolor="black")
+ax.set_title("Distribution of Order Counts")
+ax.set_xlabel("Orders")
 plt.show()
 ```
 
@@ -2526,9 +2526,9 @@ Use box plots to compare median, spread, and outliers.
 Use a scatter plot to inspect the relationship between two numeric variables.
 
 ```python
-ax = df.plot(x="Claims", y="Profit", kind="scatter")
-ax.set_title("Claims vs Profit")
-ax.set_xlabel("Claims")
+ax = df.plot(x="Orders", y="Profit", kind="scatter")
+ax.set_title("Orders vs Profit")
+ax.set_xlabel("Orders")
 ax.set_ylabel("Profit")
 plt.show()
 ```
@@ -2567,9 +2567,9 @@ Use pie charts only for simple part-to-whole comparisons.
 
 ```python
 method_counts = pd.Series({
-    "Faxed Appeals": 42,
-    "Website Appeals": 28,
-    "Mailed Appeals": 18,
+    "Faxed Operations": 42,
+    "Website Orders": 28,
+    "Mailed Operations": 18,
     "Projects": 12
 })
 
@@ -2604,7 +2604,7 @@ A density plot is a smooth estimate of distribution. It is useful for seeing sha
 ## 29.10 Correlation heatmap without seaborn
 
 ```python
-corr = df[["Revenue", "Cost", "Profit", "Claims"]].corr()
+corr = df[["Revenue", "Cost", "Profit", "Orders"]].corr()
 
 fig, ax = plt.subplots()
 im = ax.imshow(corr.values, vmin=-1, vmax=1)
@@ -2668,9 +2668,9 @@ Look for:
 Best for:
 
 - Comparing categories.
-- Analyst productivity.
-- Claims by client.
-- Recoveries by payer.
+- Reviewer productivity.
+- Orders by customer.
+- Revenue by product category.
 
 Look for:
 
@@ -2756,87 +2756,87 @@ Look for:
 
 ---
 
-# 31. Practical Claims/Appeals-Style Example
+# 31. Practical Orders and Inventory Example
 
-This example uses generic claim-style data. It is not real patient data.
+This example uses generic order and inventory data. It is not real customer data.
 
-## 31.1 Create sample claim data
+## 31.1 Create sample order and inventory data
 
 ```python
-claims = pd.DataFrame({
+orders = pd.DataFrame({
     "Reference": ["R001", "R002", "R003", "R004", "R005"],
-    "Client": ["GHS", "GHS", "CPMC", "CPMC", "UTSW"],
-    "Analyst": ["Ana", "Luis", "Ana", "Maria", "Luis"],
-    "Contract_Code": ["A1", "A1", "B2", "B2", "C3"],
-    "Expected": [500.00, 750.00, 300.00, 1000.00, 250.00],
-    "Allowed": [400.00, 750.00, 200.00, 1200.00, 0.00],
-    "Units_Billed": [2, 3, 1, 4, 1],
-    "Units_Paid": [1, 3, 1, 4, 0],
-    "Log_Message": ["Paid at 100.00%", "Paid at 100.00%", "Paid at 150.00%", "Paid at 200.00%", "Denied"]
+    "Customer": ["North Co", "North Co", "West Shop", "West Shop", "Online"],
+    "Reviewer": ["Ana", "Luis", "Ana", "Maria", "Luis"],
+    "Product_Line": ["Office", "Office", "Hardware", "Hardware", "Software"],
+    "Budgeted": [500.00, 750.00, 300.00, 1000.00, 250.00],
+    "Actual": [400.00, 750.00, 200.00, 1200.00, 0.00],
+    "Units_Ordered": [2, 3, 1, 4, 1],
+    "Units_Received": [1, 3, 1, 4, 0],
+    "Log_Message": ["Delivered complete", "Delivered complete", "Partial shipment", "Rush fee applied", "Backordered"]
 })
 ```
 
 ## 31.2 Calculate variance
 
 ```python
-claims["Variance"] = claims["Expected"] - claims["Allowed"]
+orders["Variance"] = orders["Budgeted"] - orders["Actual"]
 ```
 
 Interpretation:
 
-- Positive variance: expected is higher than allowed; possible underpayment.
-- Zero variance: allowed matches expected.
-- Negative variance: allowed is higher than expected; possible overpayment or calculation difference.
+- Positive variance: budgeted is higher than actual; possible savings opportunity.
+- Zero variance: actual matches budgeted.
+- Negative variance: actual is higher than budgeted; possible over-budget item or calculation difference.
 
-## 31.3 Categorize claim status
+## 31.3 Categorize budget status
 
 ```python
 conditions = [
-    claims["Variance"] > 0,
-    claims["Variance"] < 0,
-    claims["Variance"] == 0
+    orders["Variance"] > 0,
+    orders["Variance"] < 0,
+    orders["Variance"] == 0
 ]
 
-choices = ["Underpaid", "Overpaid", "Correct"]
+choices = ["Under Budget", "Over Budget", "On Budget"]
 
-claims["Payment_Status"] = np.select(conditions, choices, default="Review")
+orders["Budget_Status"] = np.select(conditions, choices, default="Review")
 ```
 
-## 31.4 Detect possible units issue
+## 31.4 Detect possible quantity issue
 
 ```python
-claims["Possible_Units_Issue"] = claims["Units_Paid"] < claims["Units_Billed"]
+orders["Possible_Quantity_Issue"] = orders["Units_Received"] < orders["Units_Ordered"]
 ```
 
 ## 31.5 Create a final tag
 
 ```python
-claims["Tag"] = "Review"
+orders["Tag"] = "Review"
 
-claims.loc[claims["Possible_Units_Issue"], "Tag"] = "Units Issue"
-claims.loc[claims["Payment_Status"] == "Correct", "Tag"] = "No Issue"
-claims.loc[claims["Payment_Status"] == "Overpaid", "Tag"] = "Overpaid"
+orders.loc[orders["Possible_Quantity_Issue"], "Tag"] = "Quantity Issue"
+orders.loc[orders["Budget_Status"] == "On Budget", "Tag"] = "No Issue"
+orders.loc[orders["Budget_Status"] == "Over Budget", "Tag"] = "Over Budget"
 ```
 
-## 31.6 Summary by client
+## 31.6 Summary by customer
 
 ```python
-client_summary = claims.groupby("Client").agg(
-    Claim_Count=("Reference", "nunique"),
-    Total_Expected=("Expected", "sum"),
-    Total_Allowed=("Allowed", "sum"),
+customer_summary = orders.groupby("Customer").agg(
+    Order_Count=("Reference", "nunique"),
+    Total_Budgeted=("Budgeted", "sum"),
+    Total_Actual=("Actual", "sum"),
     Total_Variance=("Variance", "sum"),
     Average_Variance=("Variance", "mean"),
     Median_Variance=("Variance", "median")
 ).reset_index()
 ```
 
-## 31.7 Summary by analyst
+## 31.7 Summary by reviewer
 
 ```python
-analyst_summary = claims.groupby("Analyst").agg(
-    Claims=("Reference", "nunique"),
-    Underpaid_Claims=("Payment_Status", lambda s: (s == "Underpaid").sum()),
+reviewer_summary = orders.groupby("Reviewer").agg(
+    Orders=("Reference", "nunique"),
+    Savings_Orders=("Budget_Status", lambda s: (s == "Under Budget").sum()),
     Total_Variance=("Variance", "sum")
 ).reset_index()
 ```
@@ -2844,10 +2844,10 @@ analyst_summary = claims.groupby("Analyst").agg(
 ## 31.8 Export results
 
 ```python
-with pd.ExcelWriter("claim_analysis.xlsx", engine="openpyxl") as writer:
-    claims.to_excel(writer, sheet_name="Claims", index=False)
-    client_summary.to_excel(writer, sheet_name="Client Summary", index=False)
-    analyst_summary.to_excel(writer, sheet_name="Analyst Summary", index=False)
+with pd.ExcelWriter("order_analysis.xlsx", engine="openpyxl") as writer:
+    orders.to_excel(writer, sheet_name="Orders", index=False)
+    customer_summary.to_excel(writer, sheet_name="Customer Summary", index=False)
+    reviewer_summary.to_excel(writer, sheet_name="Reviewer Summary", index=False)
 ```
 
 ---
@@ -2859,10 +2859,10 @@ Method chaining means applying multiple operations in a readable sequence.
 Without chaining:
 
 ```python
-df = pd.read_excel("claims.xlsx")
+df = pd.read_excel("orders.xlsx")
 df.columns = df.columns.str.strip()
 df = df.dropna(how="all")
-df["Variance"] = df["Expected"] - df["Allowed"]
+df["Variance"] = df["Budgeted"] - df["Actual"]
 df = df[df["Variance"] > 0]
 df = df.sort_values("Variance", ascending=False)
 ```
@@ -2875,11 +2875,11 @@ def clean_columns(dataframe):
     dataframe.columns = dataframe.columns.str.strip()
     return dataframe
 
-underpaid = (
-    pd.read_excel("claims.xlsx")
+under_budget = (
+    pd.read_excel("orders.xlsx")
       .pipe(clean_columns)
       .dropna(how="all")
-      .assign(Variance=lambda d: d["Expected"] - d["Allowed"])
+      .assign(Variance=lambda d: d["Budgeted"] - d["Actual"])
       .query("Variance > 0")
       .sort_values("Variance", ascending=False)
 )
@@ -2902,13 +2902,13 @@ Use chaining when it improves readability. Do not force it when simple steps are
 Fast:
 
 ```python
-df["Variance"] = df["Expected"] - df["Allowed"]
+df["Variance"] = df["Budgeted"] - df["Actual"]
 ```
 
 Slower:
 
 ```python
-df["Variance"] = df.apply(lambda row: row["Expected"] - row["Allowed"], axis=1)
+df["Variance"] = df.apply(lambda row: row["Budgeted"] - row["Actual"], axis=1)
 ```
 
 ## 33.2 Avoid building DataFrames row by row
@@ -2934,13 +2934,13 @@ df = pd.DataFrame(rows)
 ## 33.3 Read only needed columns
 
 ```python
-df = pd.read_excel("large_report.xlsx", usecols=["Claim", "Expected", "Allowed"])
+df = pd.read_excel("large_report.xlsx", usecols=["Order", "Budgeted", "Actual"])
 ```
 
 ## 33.4 Use categories for repeated text
 
 ```python
-df["Client"] = df["Client"].astype("category")
+df["Customer"] = df["Customer"].astype("category")
 ```
 
 This can reduce memory usage.
@@ -2960,7 +2960,7 @@ chunks = pd.read_csv("large_file.csv", chunksize=100_000)
 
 results = []
 for chunk in chunks:
-    summary = chunk.groupby("Client")["Allowed"].sum()
+    summary = chunk.groupby("Customer")["Actual"].sum()
     results.append(summary)
 
 final = pd.concat(results).groupby(level=0).sum()
@@ -3019,8 +3019,8 @@ This is useful for percentages, scores, or quality metrics that should not excee
 ```python
 df = (
     df.assign(
-        Variance=lambda d: d["Expected"] - d["Allowed"],
-        Recovery_Rate=lambda d: d["Allowed"] / d["Expected"]
+        Variance=lambda d: d["Budgeted"] - d["Actual"],
+        Budget_Use_Rate=lambda d: d["Actual"] / d["Budgeted"]
     )
 )
 ```
@@ -3052,17 +3052,17 @@ Use `pipe` when you want reusable cleaning steps.
 
 ```python
 df = pd.DataFrame({
-    "Claim": ["C001", "C002"],
-    "CPT_List": [["99213", "93000"], ["80053"]]
+    "Order": ["C001", "C002"],
+    "SKU_List": [["99213", "93000"], ["80053"]]
 })
 
-exploded = df.explode("CPT_List")
+exploded = df.explode("SKU_List")
 ```
 
 Output concept:
 
 ```text
-  Claim CPT_List
+  Order SKU_List
 0  C001    99213
 0  C001    93000
 1  C002    80053
@@ -3106,15 +3106,15 @@ If you run it again, you get the same sample.
 ## 34.9 `value_counts` for multiple columns
 
 ```python
-counts = df.value_counts(["Client", "Status"]).reset_index(name="Count")
+counts = df.value_counts(["Customer", "Status"]).reset_index(name="Count")
 ```
 
-This counts unique combinations of Client and Status.
+This counts unique combinations of Customer and Status.
 
 ## 34.10 Percent of total
 
 ```python
-df["Percent_of_Total"] = df["Recovered"] / df["Recovered"].sum()
+df["Percent_of_Total"] = df["Sales"] / df["Sales"].sum()
 ```
 
 Formatted as percentage:
@@ -3127,7 +3127,7 @@ df["Percent_Text"] = df["Percent_of_Total"].map(lambda x: f"{x:.2%}")
 
 ```python
 df = df.sort_values("Date")
-df["Change_From_Previous"] = df["Recovered"].diff()
+df["Change_From_Previous"] = df["Sales"].diff()
 ```
 
 Interpretation:
@@ -3139,7 +3139,7 @@ Interpretation:
 ## 34.12 Percentage change
 
 ```python
-df["Pct_Change"] = df["Recovered"].pct_change()
+df["Pct_Change"] = df["Sales"].pct_change()
 ```
 
 Interpretation:
@@ -3150,7 +3150,7 @@ Interpretation:
 ## 34.13 Cumulative sum
 
 ```python
-df["Running_Total"] = df["Recovered"].cumsum()
+df["Running_Total"] = df["Sales"].cumsum()
 ```
 
 Use this for month-to-date or year-to-date tracking.
@@ -3164,16 +3164,16 @@ df["Running_Count"] = range(1, len(df) + 1)
 Or grouped:
 
 ```python
-df["Analyst_Running_Count"] = df.groupby("Analyst").cumcount() + 1
+df["Reviewer_Running_Count"] = df.groupby("Reviewer").cumcount() + 1
 ```
 
 ## 34.15 Rank within group
 
 ```python
-df["Client_Rank"] = df.groupby("Client")["Variance"].rank(ascending=False)
+df["Customer_Rank"] = df.groupby("Customer")["Variance"].rank(ascending=False)
 ```
 
-This ranks rows inside each client.
+This ranks rows inside each customer.
 
 ## 34.16 `idxmax` and `idxmin`
 
@@ -3208,7 +3208,7 @@ This is useful for automated cleaning and summaries.
 ## 34.18 Memory-friendly categorical columns
 
 ```python
-for col in ["Client", "Status", "Method"]:
+for col in ["Customer", "Status", "Method"]:
     df[col] = df[col].astype("category")
 ```
 
@@ -3225,13 +3225,13 @@ It often appears after grouping by multiple columns.
 ## 35.1 Create a MultiIndex through groupby
 
 ```python
-summary = df.groupby(["Client", "Analyst"])["Recovered"].sum()
+summary = df.groupby(["Customer", "Reviewer"])["Sales"].sum()
 ```
 
 The result has two index levels:
 
-- Client
-- Analyst
+- Customer
+- Reviewer
 
 ## 35.2 Convert MultiIndex result back to normal columns
 
@@ -3244,7 +3244,7 @@ This is usually the easiest format for exporting to Excel.
 ## 35.3 Set a MultiIndex manually
 
 ```python
-df_indexed = df.set_index(["Client", "Analyst"])
+df_indexed = df.set_index(["Customer", "Reviewer"])
 ```
 
 ## 35.4 Select from a MultiIndex
@@ -3253,7 +3253,7 @@ df_indexed = df.set_index(["Client", "Analyst"])
 ghs_rows = df_indexed.loc["GHS"]
 ```
 
-Select a specific client and analyst:
+Select a specific customer and reviewer:
 
 ```python
 ghs_ana = df_indexed.loc[("GHS", "Ana")]
@@ -3302,34 +3302,34 @@ Example:
 ```python
 daily = pd.DataFrame({
     "Date": pd.date_range("2026-01-01", periods=7),
-    "Recovered": [100, 150, 80, 200, 220, 180, 250]
+    "Sales": [100, 150, 80, 200, 220, 180, 250]
 })
 ```
 
 ## 36.1 Cumulative sum
 
 ```python
-daily["Running_Total"] = daily["Recovered"].cumsum()
+daily["Running_Total"] = daily["Sales"].cumsum()
 ```
 
 Interpretation:
 
-Each row shows total recovered up to that date.
+Each row shows total sales up to that date.
 
 ## 36.2 Cumulative maximum
 
 ```python
-daily["Best_So_Far"] = daily["Recovered"].cummax()
+daily["Best_So_Far"] = daily["Sales"].cummax()
 ```
 
 Interpretation:
 
-Each row shows the highest recovered value seen so far.
+Each row shows the highest sales value seen so far.
 
 ## 36.3 Rolling average
 
 ```python
-daily["Rolling_3_Day_Avg"] = daily["Recovered"].rolling(window=3).mean()
+daily["Rolling_3_Day_Avg"] = daily["Sales"].rolling(window=3).mean()
 ```
 
 Interpretation:
@@ -3340,19 +3340,19 @@ Interpretation:
 Allow partial windows:
 
 ```python
-daily["Rolling_3_Day_Avg"] = daily["Recovered"].rolling(window=3, min_periods=1).mean()
+daily["Rolling_3_Day_Avg"] = daily["Sales"].rolling(window=3, min_periods=1).mean()
 ```
 
 ## 36.4 Rolling sum
 
 ```python
-daily["Rolling_3_Day_Total"] = daily["Recovered"].rolling(window=3, min_periods=1).sum()
+daily["Rolling_3_Day_Total"] = daily["Sales"].rolling(window=3, min_periods=1).sum()
 ```
 
 ## 36.5 Expanding average
 
 ```python
-daily["Expanding_Avg"] = daily["Recovered"].expanding().mean()
+daily["Expanding_Avg"] = daily["Sales"].expanding().mean()
 ```
 
 Interpretation:
@@ -3362,15 +3362,15 @@ The average grows from the first row through the current row.
 ## 36.6 Rolling by group
 
 ```python
-df = df.sort_values(["Analyst", "Date"])
+df = df.sort_values(["Reviewer", "Date"])
 
-df["Analyst_Rolling_Avg"] = (
-    df.groupby("Analyst")["Recovered"]
+df["Reviewer_Rolling_Avg"] = (
+    df.groupby("Reviewer")["Sales"]
       .transform(lambda s: s.rolling(window=3, min_periods=1).mean())
 )
 ```
 
-This calculates a rolling average separately for each analyst.
+This calculates a rolling average separately for each reviewer.
 
 ## 36.7 When rolling calculations are useful
 
@@ -3379,9 +3379,9 @@ Use rolling calculations to smooth noisy data.
 Examples:
 
 - Daily productivity trend.
-- Moving average of recovered amount.
+- Moving average of sales amount.
 - Rolling error rate.
-- Last 7 days of claim volume.
+- Last 7 days of order volume.
 
 ---
 
@@ -3395,13 +3395,13 @@ Binning means grouping numeric values into ranges.
 df["Variance_Bucket"] = pd.cut(
     df["Variance"],
     bins=[-float("inf"), 0, 100, 500, float("inf")],
-    labels=["No Underpayment", "Small", "Medium", "Large"]
+    labels=["No Savings", "Small", "Medium", "Large"]
 )
 ```
 
 Interpretation:
 
-- `<= 0` becomes `No Underpayment`.
+- `<= 0` becomes `No Savings`.
 - `0 to 100` becomes `Small`.
 - `100 to 500` becomes `Medium`.
 - `> 500` becomes `Large`.
@@ -3428,7 +3428,7 @@ bucket_counts = df["Variance_Bucket"].value_counts().sort_index()
 
 ```python
 bucket_summary = df.groupby("Variance_Bucket", observed=True).agg(
-    Claims=("Reference", "nunique"),
+    Orders=("Reference", "nunique"),
     Total_Variance=("Variance", "sum"),
     Average_Variance=("Variance", "mean")
 ).reset_index()
@@ -3443,8 +3443,8 @@ Examples:
 - Variance severity: small, medium, large.
 - Age groups.
 - Days open buckets.
-- Recovery amount tiers.
-- Claim charge ranges.
+- Revenue amount tiers.
+- Order amount ranges.
 
 ---
 
@@ -3507,9 +3507,9 @@ df = pd.read_json("data.json")
 ```python
 data = [
     {
-        "claim": "C001",
-        "patient": {"first": "John", "last": "Smith"},
-        "lines": [{"cpt": "99213", "allowed": 100}, {"cpt": "93000", "allowed": 50}]
+        "order": "C001",
+        "customer": {"first": "John", "last": "Smith"},
+        "lines": [{"sku": "99213", "actual": 100}, {"sku": "93000", "actual": 50}]
     }
 ]
 
@@ -3522,7 +3522,7 @@ For nested line items:
 lines = pd.json_normalize(
     data,
     record_path="lines",
-    meta=["claim", ["patient", "first"], ["patient", "last"]]
+    meta=["order", ["customer", "first"], ["customer", "last"]]
 )
 ```
 
@@ -3533,13 +3533,13 @@ import sqlite3
 
 conn = sqlite3.connect("database.db")
 
-df = pd.read_sql_query("SELECT * FROM claims", conn)
+df = pd.read_sql_query("SELECT * FROM orders", conn)
 ```
 
 ## 38.7 Write to SQL
 
 ```python
-df.to_sql("claims_clean", conn, if_exists="replace", index=False)
+df.to_sql("orders_clean", conn, if_exists="replace", index=False)
 ```
 
 Common `if_exists` options:
@@ -3580,10 +3580,10 @@ pandas can style DataFrames for display and Excel output.
 
 ```python
 styled = df.style.format({
-    "Expected": "${:,.2f}",
-    "Allowed": "${:,.2f}",
+    "Budgeted": "${:,.2f}",
+    "Actual": "${:,.2f}",
     "Variance": "${:,.2f}",
-    "Recovery_Rate": "{:.2%}"
+    "Budget_Use_Rate": "{:.2%}"
 })
 ```
 
@@ -3604,12 +3604,12 @@ styled = df.style.highlight_min(subset=["Variance"])
 ## 39.4 Conditional formatting with a custom function
 
 ```python
-def highlight_underpaid(value):
+def highlight_savings(value):
     if value > 0:
         return "background-color: yellow"
     return ""
 
-styled = df.style.applymap(highlight_underpaid, subset=["Variance"])
+styled = df.style.applymap(highlight_savings, subset=["Variance"])
 ```
 
 Note: styling syntax can change across pandas versions. If `applymap` is deprecated in your version, use the current Styler elementwise method recommended by the installed pandas version.
@@ -3625,26 +3625,26 @@ styled.to_excel("styled_report.xlsx", engine="openpyxl", index=False)
 ```python
 with pd.ExcelWriter("review_package.xlsx", engine="openpyxl") as writer:
     df.to_excel(writer, sheet_name="All Data", index=False)
-    df[df["Variance"] > 0].to_excel(writer, sheet_name="Underpaid", index=False)
-    df[df["Variance"] <= 0].to_excel(writer, sheet_name="No Underpayment", index=False)
+    df[df["Variance"] > 0].to_excel(writer, sheet_name="Under Budget", index=False)
+    df[df["Variance"] <= 0].to_excel(writer, sheet_name="No Savings", index=False)
 ```
 
 ## 39.7 Add an audit summary sheet
 
 ```python
 summary = pd.DataFrame({
-    "Metric": ["Rows", "Underpaid Rows", "Missing Expected", "Missing Allowed"],
+    "Metric": ["Rows", "Savings Rows", "Missing Budgeted", "Missing Actual"],
     "Value": [
         len(df),
         (df["Variance"] > 0).sum(),
-        df["Expected"].isna().sum(),
-        df["Allowed"].isna().sum()
+        df["Budgeted"].isna().sum(),
+        df["Actual"].isna().sum()
     ]
 })
 
 with pd.ExcelWriter("review_package.xlsx", engine="openpyxl") as writer:
     df.to_excel(writer, sheet_name="All Data", index=False)
-    summary.to_excel(writer, sheet_name="Audit Summary", index=False)
+    summary.to_excel(writer, sheet_name="Finance Summary", index=False)
 ```
 
 ---
@@ -3656,7 +3656,7 @@ with pd.ExcelWriter("review_package.xlsx", engine="openpyxl") as writer:
 Error:
 
 ```text
-KeyError: 'Allowed'
+KeyError: 'Actual'
 ```
 
 Cause:
@@ -3683,7 +3683,7 @@ df.columns = df.columns.str.strip()
 Example problem:
 
 ```python
-df["Variance"] = df["Expected"] - df["Allowed"]
+df["Variance"] = df["Budgeted"] - df["Actual"]
 ```
 
 If columns are text, this may fail.
@@ -3691,8 +3691,8 @@ If columns are text, this may fail.
 Fix:
 
 ```python
-df["Expected"] = pd.to_numeric(df["Expected"], errors="coerce")
-df["Allowed"] = pd.to_numeric(df["Allowed"], errors="coerce")
+df["Budgeted"] = pd.to_numeric(df["Budgeted"], errors="coerce")
+df["Actual"] = pd.to_numeric(df["Actual"], errors="coerce")
 ```
 
 ## 34.3 SettingWithCopyWarning
@@ -3700,21 +3700,21 @@ df["Allowed"] = pd.to_numeric(df["Allowed"], errors="coerce")
 Problem pattern:
 
 ```python
-underpaid = df[df["Variance"] > 0]
-underpaid["Status"] = "Underpaid"
+savings = df[df["Variance"] > 0]
+savings["Status"] = "Under Budget"
 ```
 
 Better:
 
 ```python
-underpaid = df[df["Variance"] > 0].copy()
-underpaid["Status"] = "Underpaid"
+savings = df[df["Variance"] > 0].copy()
+savings["Status"] = "Under Budget"
 ```
 
 Or update original DataFrame:
 
 ```python
-df.loc[df["Variance"] > 0, "Status"] = "Underpaid"
+df.loc[df["Variance"] > 0, "Status"] = "Under Budget"
 ```
 
 ## 34.4 Dates not working
@@ -3722,13 +3722,13 @@ df.loc[df["Variance"] > 0, "Status"] = "Underpaid"
 Fix:
 
 ```python
-df["DOS"] = pd.to_datetime(df["DOS"], errors="coerce")
+df["Order_Date"] = pd.to_datetime(df["Order_Date"], errors="coerce")
 ```
 
 Then check invalid dates:
 
 ```python
-bad_dates = df[df["DOS"].isna()]
+bad_dates = df[df["Order_Date"].isna()]
 ```
 
 ## 34.5 Merge creates too many rows
@@ -3826,19 +3826,19 @@ df["Date"] = pd.to_datetime(df["Date"], errors="coerce")
 ## Create columns
 
 ```python
-df["Variance"] = df["Expected"] - df["Allowed"]
-df["Status"] = np.where(df["Variance"] > 0, "Underpaid", "Other")
+df["Variance"] = df["Budgeted"] - df["Actual"]
+df["Status"] = np.where(df["Variance"] > 0, "Under Budget", "Other")
 ```
 
 ## Group
 
 ```python
-df.groupby("Client")["Amount"].sum()
+df.groupby("Customer")["Amount"].sum()
 
-df.groupby("Client").agg(
+df.groupby("Customer").agg(
     Total=("Amount", "sum"),
     Average=("Amount", "mean"),
-    Count=("Claim", "nunique")
+    Count=("Order", "nunique")
 ).reset_index()
 ```
 
@@ -3863,10 +3863,10 @@ df[["A", "B"]].corr()
 
 ```python
 df.plot(x="Month", y="Amount", kind="line")
-df.plot(x="Client", y="Amount", kind="bar")
+df.plot(x="Customer", y="Amount", kind="bar")
 df["Amount"].plot(kind="hist")
 df[["Amount"]].plot(kind="box")
-df.plot(x="Claims", y="Recovered", kind="scatter")
+df.plot(x="Orders", y="Sales", kind="scatter")
 plt.show()
 ```
 
